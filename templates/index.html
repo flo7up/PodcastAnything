@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Podcast Anything</title>
+
+    
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    
+</head>
+<body>
+    <div class="container">
+        <h1>Podcast Anything</h1>
+        <br>
+        
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Podcast Anything Logo" style="float: left; width: 100px; height: 100px;">
+    <div style="clear: both;"></div>
+    <br>
+        <!-- Step 1: Upload PDF -->
+        <form action="/" method="post" enctype="multipart/form-data">
+            <h2>Option 1: Upload PDF</h2>
+            <label for="pdf_file">Select PDF to Upload:</label><br>
+            <input type="file" name="pdf_file" id="pdf_file" accept=".pdf"><br><br>
+            <div class="buttons">
+                <input type="submit" name="upload_pdf" id="upload_pdf" value="Upload PDF">
+            </div>
+        </form>
+
+        <!-- Step 2: Convert PDF to Text -->
+        <form action="/" method="post">
+            <div class="buttons">
+                <input type="submit" name="convert_pdf" id="convert_pdf" value="Convert PDF to Text">
+            </div>
+        </form>
+        
+        <!-- New: Extract Text from Website -->
+        <form method="post">
+            <h2>Option 2: Extract Text from Website</h2>
+            <input type="url" name="website_url" placeholder="Enter website URL here..." required style="width: 100%; max-width: 600px;"><br>
+            <div class="buttons"> 
+                <input type="submit" name="extract_website" id="extract_website_text" value="Extract Text from Website">
+            </div>
+        </form>
+
+
+        <!-- Step 3: Generate Podcast Outline -->
+        <form action="/" method="post">
+            <h2>Generate Podcast Outline</h2>
+            <label for="text_content">Enter or Edit Extracted Text:</label><br>
+            <textarea name="text_content" id="text_content" rows="10" placeholder="The extracted text will appear here...">{{ text_content or session.get('extracted_text', '') }}</textarea><br>
+            <div class="buttons">
+                <input type="submit" name="generate_outline" id="generate_outline" value="Generate Outline">
+            </div>
+        </form>
+        <!-- some space -->
+        <br>
+        <!-- Step 4: Generate Audio Podcast -->
+        <form action="/" method="post">
+            <h2>Generate Audio Podcast</h2>
+            <!-- Speaker1 Voice Selection -->
+            <div class="form-group mt-4 voice-selection">
+                <label>Select Voices for Speakers:</label>
+                <div class="voice-selectors">
+                    <!-- Speaker1 Voice Selection -->
+                    <div class="voice-selector">
+                        <label for="speaker1_voice">Speaker 1:</label>
+                        <select name="speaker1_voice" id="speaker1_voice" class="form-control">
+                            {% for voice in available_voices %}
+                                <option value="{{ voice.name }}"
+                                    {% if voice.name == selected_voice1 %}
+                                        selected
+                                    {% endif %}
+                                >{{ voice.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+            
+                    <!-- Speaker2 Voice Selection -->
+                    <div class="voice-selector">
+                        <label for="speaker2_voice">Speaker 2:</label>
+                        <select name="speaker2_voice" id="speaker2_voice" class="form-control">
+                            {% for voice in available_voices %}
+                                <option value="{{ voice.name }}"
+                                    {% if voice.name == selected_voice2 %}
+                                        selected
+                                    {% endif %}
+                                >{{ voice.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- some space -->
+            <br>
+            <label for="conversation_text">Review/Edit Conversation Outline:</label><br>
+            <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here...">{{ conversation or '' }}</textarea><br>
+            <div class="buttons">
+                <input type="submit" name="generate_audio" id="generate_audio" value="Generate Audio">
+            </div>
+        </form>
+
+        <!-- Display Error Messages -->
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <!-- Audio Output Section -->
+        {% if audio_file %}
+            <div class="audio-section">
+                <h2>Your Podcast is Ready!</h2>
+                <audio controls>
+                    <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
+                    Your browser does not support the audio element.
+                </audio>
+                <br>
+                <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download Podcast</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

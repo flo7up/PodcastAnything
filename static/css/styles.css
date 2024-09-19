@@ -1,0 +1,147 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background-color: #f0f2f5;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    text-align: left; /* Ensure headers are left-aligned */
+    color: #333333;
+}
+
+/* Textareas */
+textarea {
+    width: 100%;
+    padding: 12px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+/* Buttons */
+.buttons {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.buttons input {
+    padding: 10px 20px;
+    margin-right: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.buttons input#upload_pdf {
+    background-color: #28a745;
+    color: white;
+}
+
+.buttons input#upload_pdf:hover {
+    background-color: #218838;
+}
+
+.buttons input#convert_pdf,
+.buttons input#extract_website_text {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.buttons input#convert_pdf:hover,
+.buttons input#extract_website_text:hover {
+    background-color: #138496;
+}
+
+.buttons input#generate_outline {
+    background-color: #ffc107;
+    color: white;
+}
+
+.buttons input#generate_outline:hover {
+    background-color: #e0a800;
+}
+
+.buttons input#generate_audio {
+    background-color: #007bff;
+    color: white;
+}
+
+.buttons input#generate_audio:hover
+{
+    background-color: #0056b3;
+}
+
+/* Error Messages */
+.error {
+    color: red;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+/* Audio Section */
+.audio-section {
+    margin-top: 25px;
+}
+
+.audio-section audio {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.audio-section a {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #17a2b8;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+/* Voice Selectors */
+.voice-selectors {
+    display: flex;
+    gap: 20px; /* Space between the selectors */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.voice-selector {
+    flex: 1; /* Equal width for both selectors */
+    min-width: 200px; /* Minimum width to prevent too small fields */
+}
+
+@media (max-width: 576px) {
+    .voice-selectors {
+        flex-direction: column;
+    }
+}
+
+/* Additional Styles */
+input[type="url"] {
+    width: 100%;
+    max-width: 600px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}

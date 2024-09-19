@@ -1,0 +1,8 @@
+flask
+python-dotenv
+azure-core
+azure-identity
+azure-ai-formrecognizer
+openai
+azure-cognitiveservices-speech
+pydub
