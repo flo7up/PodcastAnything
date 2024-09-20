@@ -8,10 +8,14 @@ from azure.ai.documentintelligence.models import AnalyzeResult
 import azure.cognitiveservices.speech as speechsdk
 from pydub import AudioSegment
 import re
-from datetime import datetime
 import uuid
 import requests
 from bs4 import BeautifulSoup
+from PyPDF2 import PdfReader
+import shutil
+from pathlib import Path
+from datetime import datetime, timedelta
+import logging
 
 load_dotenv()
 
@@ -55,7 +59,7 @@ except Exception as e:
 
 # Initialize Azure Speech Service config
 try:
-    speech_config = speechsdk.SpeechConfig(subscription=os.getenv("SPEECH_KEY"), region="swedencentral") #
+    speech_config = speechsdk.SpeechConfig(subscription=os.getenv("SPEECH_KEY_NEW"), region="swedencentral") #
     #audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True)
     speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
 
@@ -111,20 +115,36 @@ def index():
                 elif not Path(pdf_path).exists():
                     error = f'PDF file not found at {pdf_path}. Please upload the PDF again.'
                     print(f"PDF file not found at {pdf_path}.")
-                elif not document_intelligence_client:
-                    error = 'Document Intelligence client is not initialized.'
-                    print("Document Intelligence client is not initialized.")
                 else:
-                    # Extract text from PDF using Azure Document Intelligence
-                    text_content = extract_text_from_pdf(pdf_path)
-                    if text_content:
-                        # Store extracted text in session
-                        session['extracted_text'] = text_content
-                        error = 'PDF converted to text successfully. You can now generate the outline.'
-                        print("PDF converted to text successfully.")
+                    # Check if user chose to use Azure Document Intelligence
+                    use_azure = request.form.get('use_azure_doc_intelligence') == 'on'
+                    if use_azure:
+                        if not document_intelligence_client:
+                            error = 'Document Intelligence client is not initialized.'
+                            print("Document Intelligence client is not initialized.")
+                        else:
+                            # Extract text from PDF using Azure Document Intelligence
+                            text_content = extract_text_from_pdf(pdf_path)
+                            if text_content:
+                                # Store extracted text in session
+                                session['extracted_text'] = text_content
+                                error = 'PDF converted to text successfully using Azure Document Intelligence. You can now generate the outline.'
+                                print("PDF converted to text successfully using Azure Document Intelligence.")
+                            else:
+                                error = 'Failed to extract text from PDF using Azure Document Intelligence.'
+                                print("Failed to extract text from PDF using Azure Document Intelligence.")
                     else:
-                        error = 'Failed to extract text from PDF.'
-                        print("Failed to extract text from PDF.")
+                        # Use alternative method (PyPDF2)
+                        text_content = extract_text_from_pdf_pypdf2(pdf_path)
+                        if text_content:
+                            # Store extracted text in session
+                            session['extracted_text'] = text_content
+                            error = 'PDF converted to text successfully using alternative method. You can now generate the outline.'
+                            print("PDF converted to text successfully using alternative method.")
+                        else:
+                            error = 'Failed to extract text from PDF using alternative method.'
+                            print("Failed to extract text from PDF using alternative method.")
+
 
             elif 'generate_outline' in request.form:
                 # Handle Outline Generation
@@ -307,14 +327,23 @@ def index():
                            selected_voice2=selected_voice2)
 
 
+def extract_text_from_pdf_pypdf2(pdf_path):
+    """Extracts text from a PDF file using PyPDF2 as a fallback method."""
+    try:
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        print("Text extracted from PDF successfully using PyPDF2.")
+        return text.strip()
+    except Exception as e:
+        print(f"Error extracting text from PDF using PyPDF2: {e}")
+        return ''
+
 def extract_text_from_website(url):
     """
     Fetches the content of the website at the given URL and extracts meaningful text.
     """
-    
-    
-        
-
     try:
         logging.info(f"Fetching website content from URL: {url}")
         headers = {
@@ -581,10 +610,35 @@ def synthesize_speech(conversation, process_id, speaker1_voice, speaker2_voice):
     cleanup_old_files()
     return audio_file_relative  # Return relative path from 'static'
 
-import shutil
-from pathlib import Path
-from datetime import datetime, timedelta
-import logging
+
+
+# Constants for file paths
+EXTRACTED_TEXT_FILE = Path('static') / 'text_files' / 'extracted_text.txt'
+CONVERSATION_FILE = Path('static') / 'text_files' / 'conversation.txt'
+
+def save_text_to_file(text, file_path):
+    """Utility function to save text to a file."""
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(text)
+        print(f"Text successfully saved to {file_path}")
+    except Exception as e:
+        print(f"Error saving text to {file_path}: {e}")
+
+def load_text_from_file(file_path):
+    """Utility function to load text from a file."""
+    try:
+        if file_path.exists():
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            print(f"Text successfully loaded from {file_path}")
+            return text
+        else:
+            print(f"File {file_path} does not exist. Returning empty string.")
+            return ''
+    except Exception as e:
+        print(f"Error loading text from {file_path}: {e}")
+        return ''
 
 def cleanup_old_files():
     # Define the age threshold (e.g., 1 day)

@@ -1,0 +1,43 @@
+---
+
+**Speaker1:** Welcome to the Future Innovations Podcast, where we delve into the latest advancements shaping our world. Today's episode is all about the GPS AI Design Win initiative—a transformative program that's catching everyone's attention.
+
+**Speaker2:** Absolutely! It's an exciting time for AI and technology. The GPS AI Design Win initiative is designed to identify use cases and technical patterns that can significantly transform business processes. Now, this is not just about incremental improvements; it's about fundamental change.
+
+**Speaker1:** Right. The core idea here is to drive quality design wins that help achieve specific revenue thresholds quickly. For enterprises, that means reaching a 15k ACR, and for smaller businesses, it's a 3k ACR, all captured at the TPID level.
+
+**Speaker2:** That's crucial. But let's break it down more. An AI Design Win happens when apps, data, and AI solutions work together in a project, even at just 1$ ACR. Whereas an AI Design Customer is defined by reaching a higher threshold, 5k on top of the baseline for the enterprise segment in each of the three functional buckets.
+
+**Speaker1:** And how is this different from traditional solution plays? Typically, solution plays focus on delivering specific, pre-defined solutions. The AI Design Win initiative is distinct because it emphasizes discovery and validation of AI's potential to drive broader business transformation.
+
+**Speaker2:** Exactly. We're looking at a holistic approach here. The goal is to ensure that at least 50% of accounts have one AI Design Win. For AI Design Customers, the targets are more ambitious—8 customers in the first half of the fiscal year and 16 by the end.
+
+**Speaker1:** So, how can companies achieve these thresholds? Well, it might involve a single project or multiple design wins to reach the 15k ACR. Sometimes, a single win is enough; other times, it requires several.
+
+**Speaker2:** Another key point is that the ACR count starts from zero in July, and everything counts moving forward. Once a customer achieves the 15k ACR, the count resets. This approach encourages continuous engagement and innovation.
+
+**Speaker1:** And what's in it for the partners? Partners can gain enhanced funding and financial incentives through Azure Innovate. For customers, this funding rate can improve significantly for eligible partners. This creates a win-win scenario, encouraging more partner-led initiatives.
+
+**Speaker2:** Let's touch on the nomination process. For partners, it varies by what they call T-Shirt Size. For sizes under 'L', nominations go via the partner portal. For 'L' size, you need to work through PDMs. It's a streamlined validation process.
+
+**Speaker1:** Another term you'll hear is the AI Design WinWire. This is an internal email highlighting use cases, value propositions, and the reference architecture that qualify as an AI Design Win. It keeps everyone on the same page internally.
+
+**Speaker2:** Importantly, the term AI Design Win will be used in external communications too, to create a distinctive identity for the initiative. This consistency helps customers understand and engage with it better.
+
+**Speaker1:** However, partners can't track the status of their wins directly via the partner portal. Instead, they see progress reflected in the customer's tenant, which encourages closer customer-partner collaboration.
+
+**Speaker2:** Right, and managed services running in the partner tenant aren't currently supported for this initiative. The focus is on customer-led implementations to ensure the ACR counts towards the customer's TPID.
+
+**Speaker1:** The program also takes marketplace offerings into account. If a marketplace offer is deployed to the customer tenant, it counts towards the TPID and can be nominated.
+
+**Speaker2:** Then there's the AI Design Offer—tailored for customers implementing AI-enabled applications. This offer combines core Azure AI, Data, and App Services and comes with robust ROI incentives, funding, and enhanced solutions.
+
+**Speaker1:** And for those wondering about Power Apps or Copilot Studio, sellers can get paid for implementations as the consumption is included in XCR-AI. However, these aren't part of the eligibility criteria for WinWires or AI Design Customers.
+
+**Speaker2:** It's really a comprehensive initiative aiming to drive transformation at multiple levels. Whether you're a partner or a customer, there are significant advantages to getting involved.
+
+**Speaker1:** Absolutely. Well, that wraps up our discussion today. If you want more detailed information, check out the provided resources or contact your PDMs. Thanks for tuning in to the Future Innovations Podcast.
+
+**Speaker2:** Thanks for listening! Stay tuned for more insights into the future of technology.
+
+---
