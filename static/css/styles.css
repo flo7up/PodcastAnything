@@ -145,3 +145,41 @@ label {
     display: block;
     margin-bottom: 5px;
 }
+
+/* Flexbox container to align the two options side by side */
+.options-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px; /* Adds space between the two options */
+}
+
+/* Ensures that each option takes up half of the container */
+.option {
+    flex: 1;
+    margin-right: 10px;
+}
+
+/* Ensure the container remains responsive */
+@media (max-width: 768px) {
+    .options-container {
+        flex-direction: column; /* Stack options vertically on smaller screens */
+    }
+}
+
+/* Center the loading spinner inside the button area */
+
+
+#loading {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 2s linear infinite;
+    display: none; /* Hidden by default */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

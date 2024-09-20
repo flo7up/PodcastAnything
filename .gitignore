@@ -1,3 +1,6 @@
 .env
 .wav
 .mp3
+/static/audio
+/static/conversations
+/text_files
