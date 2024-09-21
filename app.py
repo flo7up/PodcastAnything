@@ -69,191 +69,206 @@ AVAILABLE_VOICES = [
     # Add more voices as needed
 ]
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def index():
     error = None
-    conversation = ''
-    text_content = ''
-    audio_file = ''
-    selected_voice1 = AVAILABLE_VOICES[0]['name']  # Default to first voice
-    selected_voice2 = AVAILABLE_VOICES[1]['name']  # Default to second voice
-
-    text_content = load_text_from_file(EXTRACTED_TEXT_FILE)
-    print(f"Text content loaded from file: {text_content}")
-    
-    if request.method == 'POST':
-        print("POST request received.")
-        print("Form data:", request.form)  # Debug statement to inspect form data
-
-        action = request.form.get('action')
-
-        if action == 'upload_pdf':
-                print("Upload PDF Form Submitted")
-                # Handle PDF Upload
-                pdf_file = request.files.get('pdf_file')
-                if pdf_file and pdf_file.filename != '':
-                    # Generate a unique filename with timestamp and UUID
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                    unique_id = uuid.uuid4().hex
-                    filename = f"{timestamp}_{unique_id}_{pdf_file.filename}"
-                    pdf_path = Path(app.config['UPLOAD_FOLDER']) / filename
-                    pdf_file.save(pdf_path)
-                    session['pdf_path'] = str(pdf_path)
-                    error = 'PDF uploaded successfully. You can now convert it to text.'
-                    print(f"PDF uploaded and saved to {pdf_path}")
-                else:
-                    error = 'No PDF file selected for upload.'
-                    print("No PDF file selected for upload.")
-
-        elif action == 'convert_pdf':
-                print("Convert PDF Form Submitted")
-                # Handle PDF to Text Conversion
-                pdf_path = session.get('pdf_path', None)
-                if not pdf_path:
-                    error = 'No PDF file path found in session. Please upload a PDF first.'
-                    print("No PDF file path found in session for conversion.")
-                elif not Path(pdf_path).exists():
-                    error = f'PDF file not found at {pdf_path}. Please upload the PDF again.'
-                    print(f"PDF file not found at {pdf_path}.")
-                else:
-                    # Check if user chose to use Azure Document Intelligence
-                    use_azure = request.form.get('use_azure_doc_intelligence') == 'on'
-                    if use_azure:
-                        if not document_intelligence_client:
-                            error = 'Document Intelligence client is not initialized.'
-                            print("Document Intelligence client is not initialized.")
-                        else:
-                            # Extract text from PDF using Azure Document Intelligence
-                            text_content = extract_text_from_pdf(pdf_path)
-                            if text_content:
-                                save_text_to_file(text_content, EXTRACTED_TEXT_FILE)  # Save to file
-                                session['extracted_text'] = text_content
-                                error = 'PDF converted to text successfully using Azure Document Intelligence.'
-                                print("PDF converted to text successfully using Azure Document Intelligence.")
-                            else:
-                                error = 'Failed to extract text from PDF using Azure Document Intelligence.'
-                                print("Failed to extract text from PDF using Azure Document Intelligence.")
-                    else:
-                        # Use alternative method (PyPDF2)
-                        text_content = extract_text_from_pdf_pypdf2(pdf_path)
-                        if text_content:
-                            save_text_to_file(text_content, EXTRACTED_TEXT_FILE)  # Save to file
-                            session['extracted_text'] = text_content
-                            error = 'PDF converted to text successfully using alternative method.'
-                            print("PDF converted to text successfully using alternative method.")
-                        else:
-                            error = 'Failed to extract text from PDF using alternative method.'
-                            print("Failed to extract text from PDF using alternative method.")
-
-        elif action == 'generate_outline':
-                print("Generate Outline Form Submitted")
-
-                # Handle Outline Generation
-                if not MODEL_NAME:
-                    error = 'OpenAI model is not configured properly.'
-                    print("OpenAI model is not configured properly.")
-                else:
-                    # Retrieve extracted text from the form
-                    text_content = request.form.get('text_content', '').strip()
-                    print(f"Text content retrieved: {text_content}")
-
-                    if not text_content:
-                        error = 'Text content is empty. Please upload and convert a PDF or enter text.'
-                        print("Text content is empty when attempting to generate outline.")
-                    else:
-                        # Ensure text content length is within the character limit
-                        MAX_TEXT_LENGTH = 15000
-                        if len(text_content) > MAX_TEXT_LENGTH:
-                            text_content = text_content[:MAX_TEXT_LENGTH]
-                            error = f'Text content truncated to {MAX_TEXT_LENGTH} characters.'
-                            print(f"Text content truncated to {MAX_TEXT_LENGTH} characters.")
-
-                        # Generate a new podcast conversation using OpenAI
-                        process_id = str(uuid.uuid4())  # Always create a new unique process ID
-                        print("Calling OpenAI API to generate a new conversation...")
-                        conversation = generate_conversation(text_content, process_id)
-
-                        if not conversation:
-                            error = 'Failed to generate conversation.'
-                            print("Failed to generate conversation.")
-                        else:
-                            # Save the newly generated conversation to session and file
-                            session['conversation'] = conversation
-                            save_text_to_file(conversation, CONVERSATION_FILE)
-                            print("New conversation stored in session and saved to file.")
-
-        elif action == 'generate_audio':
-                # Handle Audio Generation
-                selected_voice1 = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
-                selected_voice2 = request.form.get('speaker2_voice', AVAILABLE_VOICES[1]['name'])
-                conversation = request.form.get('conversation_text', '')
-
-                if not conversation.strip():
-                    error = 'Conversation text is empty. Please generate the outline first.'
-                    print("Conversation text is empty when attempting to generate audio.")
-                else:
-                    if not speech_config:
-                        error = 'Speech configuration is not set up properly.'
-                        print("Speech configuration is not set up properly.")
-                    else:
-                        process_id = session.get('process_id', str(uuid.uuid4()))
-                        session['process_id'] = process_id  # Update or set process_id in session
-
-                        # Synthesize speech from conversation
-                        try:
-                            audio_file = synthesize_speech(conversation, process_id, selected_voice1, selected_voice2)
-                        except Exception as e:
-                            error = f"An unexpected error occurred during speech synthesis: {e}"
-                            print(f"Unexpected error during speech synthesis: {e}")
-
-                        if not audio_file:
-                            error = 'Failed to synthesize speech.'
-                        else:
-                            session['audio_file'] = audio_file
-
-        # Handle Extract Text from Website
-        elif action == 'extract_website':
-                website_url = request.form.get('website_url', '').strip()
-                if not website_url:
-                    error = 'No website URL provided.'
-                else:
-                    if not re.match(r'^https?:\/\/\S+\.\S+', website_url):
-                        error = 'Invalid URL format. Please enter a valid website URL.'
-                    else:
-                        extracted_text = extract_text_from_website(website_url)
-                        if extracted_text:
-                            save_text_to_file(extracted_text, EXTRACTED_TEXT_FILE)  # Save to file
-                            session['extracted_text'] = extracted_text
-                            error = 'Text extracted from website successfully.'
-                        else:
-                            error = 'Failed to extract text from the provided website.'
-        else:
-                error = 'Invalid form submission.'
-
-    # If no conversation is in the session, load it from the file (on GET requests or when first loading the page)
     conversation = session.get('conversation', '') or load_text_from_file(CONVERSATION_FILE)
+    text_content = session.get('extracted_text', '') or load_text_from_file(EXTRACTED_TEXT_FILE)
+    audio_file = session.get('audio_file', '')
 
     return render_template('index.html',
                            error=error,
                            conversation=conversation,
                            text_content=text_content,
-                           audio_file=session.get('audio_file', ''),
+                           audio_file=audio_file,
                            available_voices=AVAILABLE_VOICES,
                            selected_voice1=session.get('speaker1_voice', AVAILABLE_VOICES[0]['name']),
                            selected_voice2=session.get('speaker2_voice', AVAILABLE_VOICES[1]['name']))
 
+@app.route('/upload_pdf', methods=['POST'])
+def upload_pdf():
+    try:
+        pdf_file = request.files.get('pdf_file')
+        if pdf_file and pdf_file.filename != '':
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_id = uuid.uuid4().hex
+            filename = f"{timestamp}_{unique_id}_{pdf_file.filename}"
+            pdf_path = Path(app.config['UPLOAD_FOLDER']) / filename
+            pdf_file.save(pdf_path)
+            session['pdf_path'] = str(pdf_path)
+            message = 'PDF uploaded successfully. You can now convert it to text.'
+            print(f"PDF uploaded and saved to {pdf_path}")
+            return jsonify({'status': 'success', 'message': message})
+        else:
+            error = 'No PDF file selected for upload.'
+            print("No PDF file selected for upload.")
+            return jsonify({'status': 'error', 'message': error})
+    except Exception as e:
+        error = f"Error during PDF upload: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error})
+
+@app.route('/convert_pdf', methods=['POST'])
+def convert_pdf():
+    try:
+        pdf_path = session.get('pdf_path', None)
+        if not pdf_path:
+            error = 'No PDF file path found in session. Please upload a PDF first.'
+            print("No PDF file path found in session for conversion.")
+            return jsonify({'status': 'error', 'message': error})
+        elif not Path(pdf_path).exists():
+            error = f'PDF file not found at {pdf_path}. Please upload the PDF again.'
+            print(f"PDF file not found at {pdf_path}.")
+            return jsonify({'status': 'error', 'message': error})
+        else:
+            use_azure = request.form.get('use_azure_doc_intelligence') == 'true'
+            if use_azure:
+                if not document_intelligence_client:
+                    error = 'Document Intelligence client is not initialized.'
+                    print("Document Intelligence client is not initialized.")
+                    return jsonify({'status': 'error', 'message': error})
+                else:
+                    text_content = extract_text_from_pdf(pdf_path)
+                    if text_content:
+                        save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
+                        session['extracted_text'] = text_content
+                        message = 'PDF converted to text successfully using Azure Document Intelligence.'
+                        print("PDF converted to text successfully using Azure Document Intelligence.")
+                        return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
+                    else:
+                        error = 'Failed to extract text from PDF using Azure Document Intelligence.'
+                        print("Failed to extract text from PDF using Azure Document Intelligence.")
+                        return jsonify({'status': 'error', 'message': error})
+            else:
+                text_content = extract_text_from_pdf_pypdf2(pdf_path)
+                if text_content:
+                    save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
+                    session['extracted_text'] = text_content
+                    message = 'PDF converted to text successfully using alternative method.'
+                    print("PDF converted to text successfully using alternative method.")
+                    return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
+                else:
+                    error = 'Failed to extract text from PDF using alternative method.'
+                    print("Failed to extract text from PDF using alternative method.")
+                    return jsonify({'status': 'error', 'message': error})
+    except Exception as e:
+        error = f"Error during PDF conversion: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error})
+
+@app.route('/generate_outline', methods=['POST'])
+def generate_outline():
+    try:
+        text_content = request.form.get('text_content', '').strip()
+        print(f"Text content retrieved: {text_content}")
+
+        if not text_content:
+            error = 'Text content is empty. Please upload and convert a PDF or enter text.'
+            print("Text content is empty when attempting to generate outline.")
+            return jsonify({'status': 'error', 'message': error})
+        else:
+            MAX_TEXT_LENGTH = 15000
+            if len(text_content) > MAX_TEXT_LENGTH:
+                text_content = text_content[:MAX_TEXT_LENGTH]
+                error = f'Text content truncated to {MAX_TEXT_LENGTH} characters.'
+                print(f"Text content truncated to {MAX_TEXT_LENGTH} characters.")
+
+            process_id = str(uuid.uuid4())
+            print("Calling OpenAI API to generate a new conversation...")
+            conversation = generate_conversation(text_content, process_id)
+
+            if not conversation:
+                error = 'Failed to generate conversation.'
+                print("Failed to generate conversation.")
+                return jsonify({'status': 'error', 'message': error})
+            else:
+                session['conversation'] = conversation
+                save_text_to_file(conversation, CONVERSATION_FILE)
+                print("New conversation stored in session and saved to file.")
+                return jsonify({'status': 'success', 'conversation': conversation, 'message': 'Conversation generated successfully.'})
+    except Exception as e:
+        error = f"Error during conversation generation: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error})
+
+@app.route('/generate_audio', methods=['POST'])
+def generate_audio():
+    try:
+        selected_voice1 = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
+        selected_voice2 = request.form.get('speaker2_voice', AVAILABLE_VOICES[1]['name'])
+        conversation = request.form.get('conversation_text', '')
+
+        if not conversation.strip():
+            error = 'Conversation text is empty. Please generate the outline first.'
+            print("Conversation text is empty when attempting to generate audio.")
+            return jsonify({'status': 'error', 'message': error})
+        else:
+            if not speech_config:
+                error = 'Speech configuration is not set up properly.'
+                print("Speech configuration is not set up properly.")
+                return jsonify({'status': 'error', 'message': error})
+            else:
+                process_id = session.get('process_id', str(uuid.uuid4()))
+                session['process_id'] = process_id
+
+                try:
+                    audio_file = synthesize_speech(conversation, process_id, selected_voice1, selected_voice2)
+                except Exception as e:
+                    error = f"An unexpected error occurred during speech synthesis: {e}"
+                    print(f"Unexpected error during speech synthesis: {e}")
+                    return jsonify({'status': 'error', 'message': error})
+
+                if not audio_file:
+                    error = 'Failed to synthesize speech.'
+                    return jsonify({'status': 'error', 'message': error})
+                else:
+                    session['audio_file'] = audio_file
+                    return jsonify({'status': 'success', 'audio_file': audio_file, 'message': 'Audio generated successfully.'})
+    except Exception as e:
+        error = f"Error during audio generation: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error})
+
+@app.route('/extract_website', methods=['POST'])
+def extract_website():
+    try:
+        website_url = request.form.get('website_url', '').strip()
+        if not website_url:
+            error = 'No website URL provided.'
+            return jsonify({'status': 'error', 'message': error})
+        else:
+            if not re.match(r'^https?:\/\/\S+\.\S+', website_url):
+                error = 'Invalid URL format. Please enter a valid website URL.'
+                return jsonify({'status': 'error', 'message': error})
+            else:
+                extracted_text = extract_text_from_website(website_url)
+                if extracted_text:
+                    save_text_to_file(extracted_text, EXTRACTED_TEXT_FILE)
+                    session['extracted_text'] = extracted_text
+                    message = 'Text extracted from website successfully.'
+                    return jsonify({'status': 'success', 'text_content': extracted_text, 'message': message})
+                else:
+                    error = 'Failed to extract text from the provided website.'
+                    return jsonify({'status': 'error', 'message': error})
+    except Exception as e:
+        error = f"Error during website text extraction: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error})
+
+
 @app.route('/autosave', methods=['POST'])
 def autosave():
     try:
-        # Get the text and the type (extracted_text or conversation)
-        text = request.form.get('text', '')
-        text_type = request.form.get('text_type')
+        data = request.get_json()
+        text = data.get('text', '')
+        text_type = data.get('text_type')
 
-        # Based on the text_type, save the text to the appropriate file
         if text_type == 'extracted_text':
             save_text_to_file(text, EXTRACTED_TEXT_FILE)
+            session['extracted_text'] = text  # Save to session as well
         elif text_type == 'conversation':
             save_text_to_file(text, CONVERSATION_FILE)
+            session['conversation'] = text  # Save to session as well
         else:
             return jsonify({'status': 'error', 'message': 'Invalid text type'}), 400
 
@@ -261,6 +276,7 @@ def autosave():
     except Exception as e:
         print(f"Error in autosave: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+    
     
 def extract_text_from_pdf_pypdf2(pdf_path):
     """Extracts text from a PDF file using PyPDF2 as a fallback method."""
