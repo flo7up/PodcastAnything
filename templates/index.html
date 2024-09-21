@@ -5,78 +5,7 @@
     <title>Podcast Anything</title>
     
     <style>
-        /* Spinner Styles */
-        #loading {
-            border: 4px solid #f3f3f3; /* Light grey */
-            border-top: 4px solid #3498db; /* Blue */
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 2s linear infinite;
-            display: none; /* Hidden by default */
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Center the logo */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        /* Align the two options horizontally */
-        .options-container {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .option {
-            flex: 1;
-            margin-right: 10px;
-        }
-        
-        .option:last-child {
-            margin-right: 0; /* Remove margin for the last option */
-        }
-        
-        /* Additional Styling for Better Presentation */
-        .container {
-            width: 80%;
-            margin: auto;
-            padding: 20px;
-        }
-        
-        .buttons {
-            margin-top: 10px;
-        }
-        
-        .buttons input[type="submit"] {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        
-        .buttons input[type="submit"]:disabled {
-            background-color: #95a5a6;
-            cursor: not-allowed;
-        }
-        
-        .error {
-            color: red;
-            font-weight: bold;
-        }
-        
-        .audio-section {
-            margin-top: 20px;
-        }
+        /* Insert the updated CSS here */
     </style>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -131,7 +60,6 @@
                 autoSaveText(this, 'conversation');
             });
         });
-        
     </script>
 
     <!-- Link to External CSS (Optional) -->
@@ -143,20 +71,21 @@
 
         <!-- Centered logo -->
         <div class="logo-container">
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Podcast Anything Logo" style="width: 100px; height: 100px;">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Podcast Anything Logo">
         </div>
-        
+        <h2>Input Content</h2>
         <div class="options-container">
             <!-- Option 1: Upload PDF -->
             <div class="option">
-                <h2>Option 1: Upload PDF</h2>
+                <h2>Upload PDF</h2>
                 
                 <!-- Form to Upload PDF -->
                 <form action="/" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="upload_pdf">
                     
-                    <label for="pdf_file">Select PDF to Upload:</label><br>
-                    <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required><br><br>
+                    <label for="pdf_file">Select PDF to Upload:</label>
+                    <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required>
+                    
                     <div class="buttons">
                         <input type="submit" name="upload_pdf" id="upload_pdf" value="Upload PDF">
                     </div>
@@ -169,36 +98,42 @@
                     <label for="use_azure_doc_intelligence">
                         <input type="checkbox" name="use_azure_doc_intelligence" id="use_azure_doc_intelligence" checked>
                         Use Azure Document Intelligence
-                    </label><br><br>
+                    </label>
+                    
                     <div class="buttons">
                         <input type="submit" name="convert_pdf" id="convert_pdf" value="Convert PDF to Text">
                     </div>
                 </form>
             </div>
-    
+            <div class="optiondivider">
+                <h2>Or</h2>
+            </div>  
             <!-- Option 2: Extract Text from Website -->
             <div class="option">
-                <h2>Option 2: Extract Text from Website</h2>
+                <h2>Extract Text from Website</h2>
                 
                 <!-- Form to Extract Text from Website -->
                 <form action="/" method="post">
                     <input type="hidden" name="action" value="extract_website">
                     
-                    <input type="url" name="website_url" placeholder="Enter website URL here..." required><br><br>
+                    <label for="website_url">Website URL:</label>
+                    <input type="url" name="website_url" id="website_url" placeholder="Enter website URL here..." required>
+                    
                     <div class="buttons">
                         <input type="submit" name="extract_website" id="extract_website_text" value="Extract Text from Website">
                     </div>
                 </form>
             </div>
         </div>
-    
+        <br>
         <!-- Generate Podcast Outline Section -->
-        <h2>Generate Podcast Outline</h2>
+        
         <form action="/" method="post" id="outlineForm">
             <input type="hidden" name="action" value="generate_outline">
             
-            <label for="text_content">Enter or Edit Extracted Text:</label><br>
-            <textarea name="text_content" id="text_content" rows="10" required>{{ text_content }}</textarea><br>
+            <label for="text_content">Enter or Edit Extracted Text:</label>
+            <textarea name="text_content" id="text_content" rows="10" required>{{ text_content }}</textarea>
+            
             <div class="buttons">
                 <input type="submit" id="generate_outline" value="Generate Outline">
                 <!-- Loading spinner -->
@@ -207,43 +142,40 @@
         </form>
         
         <!-- Step 4: Generate Audio Podcast -->
-        <h2>Generate Audio Podcast</h2>
+        <h2>Podcast Outline</h2>
         <form action="/" method="post" id="generateAudioForm">
             <input type="hidden" name="action" value="generate_audio">
             
-            <div class="form-group mt-4 voice-selection">
+            <div class="form-group voice-selection">
                 <label>Select Voices for Speakers:</label>
                 <div class="voice-selectors">
                     <div class="voice-selector">
                         <label for="speaker1_voice">Speaker 1:</label>
-                        <select name="speaker1_voice" id="speaker1_voice" class="form-control" required>
+                        <select name="speaker1_voice" id="speaker1_voice" required>
                             {% for voice in available_voices %}
-                                <option value="{{ voice.name }}"
-                                    {% if voice.name == selected_voice1 %}
-                                        selected
-                                    {% endif %}
-                                >{{ voice.display_name }}</option>
+                                <option value="{{ voice.name }}" {% if voice.name == selected_voice1 %}selected{% endif %}>
+                                    {{ voice.display_name }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
             
                     <div class="voice-selector">
                         <label for="speaker2_voice">Speaker 2:</label>
-                        <select name="speaker2_voice" id="speaker2_voice" class="form-control" required>
+                        <select name="speaker2_voice" id="speaker2_voice" required>
                             {% for voice in available_voices %}
-                                <option value="{{ voice.name }}"
-                                    {% if voice.name == selected_voice2 %}
-                                        selected
-                                    {% endif %}
-                                >{{ voice.display_name }}</option>
+                                <option value="{{ voice.name }}" {% if voice.name == selected_voice2 %}selected{% endif %}>
+                                    {{ voice.display_name }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
             </div>
-            <br>
-            <label for="conversation_text">Review/Edit Conversation Outline:</label><br>
-            <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here..." required>{{ conversation }}</textarea><br>
+            
+            <label for="conversation_text">Review/Edit Conversation Outline:</label>
+            <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here..." required>{{ conversation }}</textarea>
+            
             <div class="buttons">
                 <input type="submit" name="generate_audio" id="generate_audio" value="Generate Audio">
             </div>
@@ -262,7 +194,6 @@
                     <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
                     Your browser does not support the audio element.
                 </audio>
-                <br>
                 <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download Podcast</a>
             </div>
         {% endif %}

@@ -1,8 +1,23 @@
 /* General Styles */
+:root {
+    --color-primary: #3498db;
+    --color-primary-hover: #2980b9;
+    --color-success: #28a745;
+    --color-success-hover: #218838;
+    --color-info: #17a2b8;
+    --color-info-hover: #138496;
+    --color-warning: #ffc107;
+    --color-warning-hover: #e0a800;
+    --color-danger: #dc3545;
+    --color-light: #f0f2f5;
+    --color-dark: #333333;
+    --font-family: 'Arial', sans-serif;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: var(--font-family);
     margin: 40px;
-    background-color: #f0f2f5;
+    background-color: var(--color-light);
 }
 
 .container {
@@ -11,82 +26,93 @@ body {
     background-color: #ffffff;
     padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 h1, h2 {
-    text-align: left; /* Ensure headers are left-aligned */
-    color: #333333;
+    text-align: left;
+    color: var(--color-dark);
+    margin-bottom: 20px;
 }
 
-/* Textareas */
-textarea {
+/* Textareas and Inputs */
+textarea, input[type="url"], input[type="file"], select {
     width: 100%;
     padding: 12px;
-    resize: vertical;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
     margin-bottom: 15px;
+    box-sizing: border-box;
+}
+
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
 }
 
 /* Buttons */
 .buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-top: 10px;
     margin-bottom: 20px;
 }
 
 .buttons input {
     padding: 10px 20px;
-    margin-right: 10px;
     font-size: 16px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    color: white;
+    transition: background-color 0.3s ease;
 }
 
 .buttons input#upload_pdf {
-    background-color: #28a745;
-    color: white;
+    background-color: var(--color-success);
 }
 
 .buttons input#upload_pdf:hover {
-    background-color: #218838;
+    background-color: var(--color-success-hover);
 }
 
 .buttons input#convert_pdf,
 .buttons input#extract_website_text {
-    background-color: #17a2b8;
-    color: white;
+    background-color: var(--color-info);
 }
 
 .buttons input#convert_pdf:hover,
 .buttons input#extract_website_text:hover {
-    background-color: #138496;
+    background-color: var(--color-info-hover);
 }
 
 .buttons input#generate_outline {
-    background-color: #ffc107;
-    color: white;
+    background-color: var(--color-warning);
 }
 
 .buttons input#generate_outline:hover {
-    background-color: #e0a800;
+    background-color: var(--color-warning-hover);
 }
 
 .buttons input#generate_audio {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--color-primary);
 }
 
-.buttons input#generate_audio:hover
-{
-    background-color: #0056b3;
+.buttons input#generate_audio:hover {
+    background-color: var(--color-primary-hover);
+}
+
+.buttons input[type="submit"]:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
 }
 
 /* Error Messages */
 .error {
-    color: red;
+    color: var(--color-danger);
     margin-top: 15px;
     font-weight: bold;
 }
@@ -104,22 +130,27 @@ textarea {
 .audio-section a {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #17a2b8;
+    background-color: var(--color-info);
     color: white;
     text-decoration: none;
     border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.audio-section a:hover {
+    background-color: var(--color-info-hover);
 }
 
 /* Voice Selectors */
 .voice-selectors {
     display: flex;
-    gap: 20px; /* Space between the selectors */
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .voice-selector {
-    flex: 1; /* Equal width for both selectors */
-    min-width: 200px; /* Minimum width to prevent too small fields */
+    flex: 1;
+    min-width: 200px;
 }
 
 @media (max-width: 576px) {
@@ -128,58 +159,78 @@ textarea {
     }
 }
 
-/* Additional Styles */
-input[type="url"] {
-    width: 100%;
-    max-width: 600px;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-}
-
-label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 5px;
-}
-
-/* Flexbox container to align the two options side by side */
+/* Options Container */
 .options-container {
     display: flex;
     justify-content: space-between;
-    gap: 20px; /* Adds space between the two options */
+    gap: 20px;
 }
 
-/* Ensures that each option takes up half of the container */
 .option {
     flex: 1;
-    margin-right: 10px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+    /* add border */
+    border: 1px solid #ccc;
+    border-radius: 5%;
 }
 
-/* Ensure the container remains responsive */
+.option:last-child {
+    margin-right: 0;
+}
+
 @media (max-width: 768px) {
     .options-container {
-        flex-direction: column; /* Stack options vertically on smaller screens */
+        flex-direction: column;
     }
 }
 
-/* Center the loading spinner inside the button area */
-
-
+/* Spinner Styles */
 #loading {
-    border: 4px solid #f3f3f3; /* Light grey */
-    border-top: 4px solid #3498db; /* Blue */
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--color-primary);
     border-radius: 50%;
     width: 20px;
     height: 20px;
-    animation: spin 2s linear infinite;
-    display: none; /* Hidden by default */
+    animation: spin 1s linear infinite;
+    display: none;
+    margin-left: 10px;
+    vertical-align: middle;
 }
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Logo Container */
+.logo-container {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo-container img {
+    width: 100px;
+    height: 100px;
+}
+
+/* Additional Styling */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.audio-section a {
+    margin-top: 10px;
+}
+
+.optiondivider {
+    margin-right: 20px;
+    padding-left: 20px;
+    text-align: center;
+    /* vertically align text center;*/
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
