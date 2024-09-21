@@ -1,63 +1,36 @@
-from flask import Flask, render_template, request, url_for, session, jsonify
+from flask import Flask, render_template, request, url_for, session, jsonify, send_file, Response, stream_with_context
 import os
 from dotenv import load_dotenv
-import openai
-from azure.core.credentials import AzureKeyCredential
-from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.ai.documentintelligence.models import AnalyzeResult
-import azure.cognitiveservices.speech as speechsdk
-from pydub import AudioSegment
 import re
 import uuid
-import requests
-from bs4 import BeautifulSoup
-from PyPDF2 import PdfReader
-import shutil
 from pathlib import Path
-from datetime import datetime, timedelta
-import logging
+from datetime import datetime
+from pathlib import Path  
+
+# Import utility functions and constants
+from utils import (
+    extract_text_from_pdf_pypdf2,
+    extract_text_from_website,
+    extract_text_from_pdf,
+    generate_conversation,
+    synthesize_speech,
+    synthesize_text_stream,
+    cleanup_temp_file,
+    save_text_to_file,
+    load_text_from_file,
+    cleanup_old_files,
+    EXTRACTED_TEXT_FILE,
+    CONVERSATION_FILE,
+    transcribe_audio,
+    generate_answer
+)
 
 load_dotenv()
+cleanup_old_files()
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-keyx'  # Replace with a secure secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
-
-
-
-# Initialize Azure OpenAI client
-try:
-    openai.api_type = "azure"
-    openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
-    openai.api_version = os.getenv("AZURE_OPENAI_API_VERSION")
-    openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    MODEL_NAME = os.getenv("AZURE_OPENAI_MODEL_NAME")
-    if not all([openai.api_base, openai.api_version, openai.api_key, MODEL_NAME]):
-        raise ValueError("Azure OpenAI configuration is incomplete.")
-except Exception as e:
-    print(f"Error initializing Azure OpenAI client: {e}")
-    MODEL_NAME = None
-
-# Initialize Azure Document Intelligence client
-try:
-    document_intelligence_client = DocumentIntelligenceClient(
-        endpoint=os.getenv("DOCUMENTINTELLIGENCE_ENDPOINT"),
-        credential=AzureKeyCredential(os.getenv("DOCUMENTINTELLIGENCE_API_KEY"))
-    )
-    if not os.getenv("DOCUMENTINTELLIGENCE_ENDPOINT") or not os.getenv("DOCUMENTINTELLIGENCE_API_KEY"):
-        raise ValueError("Azure Document Intelligence configuration is incomplete.")
-except Exception as e:
-    print(f"Error initializing Azure Document Intelligence client: {e}")
-    document_intelligence_client = None
-
-# Initialize Azure Speech Service config
-try:
-    speech_config = speechsdk.SpeechConfig(subscription=os.getenv("SPEECH_KEY_NEW"), region="swedencentral") #
-    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
-
-except Exception as e:
-    print(f"Error initializing Azure Speech Service config: {e}")
-    speech_config = None
 
 # Define available voices (Option 1: Hardcoded)
 AVAILABLE_VOICES = [
@@ -123,22 +96,17 @@ def convert_pdf():
         else:
             use_azure = request.form.get('use_azure_doc_intelligence') == 'true'
             if use_azure:
-                if not document_intelligence_client:
-                    error = 'Document Intelligence client is not initialized.'
-                    print("Document Intelligence client is not initialized.")
-                    return jsonify({'status': 'error', 'message': error})
+                text_content = extract_text_from_pdf(pdf_path)
+                if text_content:
+                    save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
+                    session['extracted_text'] = text_content
+                    message = 'PDF converted to text successfully using Azure Document Intelligence.'
+                    print("PDF converted to text successfully using Azure Document Intelligence.")
+                    return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
                 else:
-                    text_content = extract_text_from_pdf(pdf_path)
-                    if text_content:
-                        save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
-                        session['extracted_text'] = text_content
-                        message = 'PDF converted to text successfully using Azure Document Intelligence.'
-                        print("PDF converted to text successfully using Azure Document Intelligence.")
-                        return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
-                    else:
-                        error = 'Failed to extract text from PDF using Azure Document Intelligence.'
-                        print("Failed to extract text from PDF using Azure Document Intelligence.")
-                        return jsonify({'status': 'error', 'message': error})
+                    error = 'Failed to extract text from PDF using Azure Document Intelligence.'
+                    print("Failed to extract text from PDF using Azure Document Intelligence.")
+                    return jsonify({'status': 'error', 'message': error})
             else:
                 text_content = extract_text_from_pdf_pypdf2(pdf_path)
                 if text_content:
@@ -203,31 +171,24 @@ def generate_audio():
             print("Conversation text is empty when attempting to generate audio.")
             return jsonify({'status': 'error', 'message': error})
         else:
-            if not speech_config:
-                error = 'Speech configuration is not set up properly.'
-                print("Speech configuration is not set up properly.")
+
+            process_id = session.get('process_id', str(uuid.uuid4()))
+            session['process_id'] = process_id
+
+            # Synthesize speech using the utility function
+            audio_file = synthesize_speech(conversation, process_id, selected_voice1, selected_voice2)
+            if not audio_file:
+                error = 'Failed to synthesize speech.'
                 return jsonify({'status': 'error', 'message': error})
-            else:
-                process_id = session.get('process_id', str(uuid.uuid4()))
-                session['process_id'] = process_id
-
-                try:
-                    audio_file = synthesize_speech(conversation, process_id, selected_voice1, selected_voice2)
-                except Exception as e:
-                    error = f"An unexpected error occurred during speech synthesis: {e}"
-                    print(f"Unexpected error during speech synthesis: {e}")
-                    return jsonify({'status': 'error', 'message': error})
-
-                if not audio_file:
-                    error = 'Failed to synthesize speech.'
-                    return jsonify({'status': 'error', 'message': error})
-                else:
-                    session['audio_file'] = audio_file
-                    return jsonify({'status': 'success', 'audio_file': audio_file, 'message': 'Audio generated successfully.'})
+            
+            # Store audio file path in session
+            session['audio_file'] = audio_file
+            return jsonify({'status': 'success', 'audio_file': audio_file, 'message': 'Audio generated successfully.'})
     except Exception as e:
         error = f"Error during audio generation: {e}"
         print(error)
         return jsonify({'status': 'error', 'message': error})
+    
 
 @app.route('/extract_website', methods=['POST'])
 def extract_website():
@@ -276,323 +237,70 @@ def autosave():
     except Exception as e:
         print(f"Error in autosave: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/process_question', methods=['POST'])
+def process_question():
+    print("Processing question...")
+    # Ensure the request contains the audio data
+    if 'audio_data' not in request.files:
+        return Response("No audio_data part in the request.", status=400)
+
+    audio_file = request.files['audio_data']
+
+    if audio_file.filename == '':
+        return Response("No selected file.", status=400)
+
+    # Save the uploaded audio file temporarily
+    process_id = uuid.uuid4().hex  # Unique ID for this process
+    temp_audio_path = f"temp_audio_{process_id}.wav"
+    audio_file.save(temp_audio_path)
+
+    # Transcribe the audio to text
+    transcription = transcribe_audio(temp_audio_path)
+    if not transcription:
+        cleanup_temp_file(temp_audio_path)
+        return Response("Failed to transcribe audio.", status=500)
+
+    print(f"Transcription: {transcription}")
+
+    # Generate a response using OpenAI GPT-4
     
+    context = request.form.get('text_content', '').strip()
     
-def extract_text_from_pdf_pypdf2(pdf_path):
-    """Extracts text from a PDF file using PyPDF2 as a fallback method."""
-    try:
-        reader = PdfReader(pdf_path)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        print("Text extracted from PDF successfully using PyPDF2.")
-        return text.strip()
-    except Exception as e:
-        print(f"Error extracting text from PDF using PyPDF2: {e}")
-        return ''
+    if not context:
+        context = "Default context if none available."
 
-def extract_text_from_website(url):
-    """
-    Fetches the content of the website at the given URL and extracts meaningful text.
-    """
-    try:
-        logging.info(f"Fetching website content from URL: {url}")
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; PodcastGenerator/1.0; +http://yourdomain.com/bot)"
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # Raises HTTPError for bad responses
+    answer = generate_answer(transcription, context)
+    if not answer:
+        cleanup_temp_file(temp_audio_path)
+        return Response("Failed to generate answer.", status=500)
 
-        # Check if the content type is HTML
-        content_type = response.headers.get('Content-Type', '')
-        if 'text/html' not in content_type:
-            logging.error(f"URL does not point to an HTML page. Content-Type: {content_type}")
-            return None
+    print(f"Generated Answer: {answer}")
+    
+    # retrieve speaker voice 1
+    speaker_voice = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
+    import time
+    # 5 seconds wait
+    time.sleep(5)
 
-    except requests.RequestException as e:
-        logging.error(f"Error fetching website content: {e}")
-        return None
-
-    # Parse HTML content
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Remove scripts, styles, and other non-text elements
-    for script in soup(["script", "style", "header", "footer", "nav", "aside"]):
-        script.decompose()
-
-    # Extract text
-    text = soup.get_text(separator='\n')
-
-    # Collapse multiple newlines into single ones
-    lines = [line.strip() for line in text.splitlines()]
-    chunks = [phrase for line in lines for phrase in line.split("  ") if phrase]
-    clean_text = '\n'.join(chunks)
-
-    logging.info("Text extraction from website successful.")
-    return clean_text
-
-def extract_text_from_pdf(pdf_path):
-    if not document_intelligence_client:
-        print("Document Intelligence client is not initialized.")
-        return ''
-
-    print("Extracting text with Azure Document Intelligence")
-    try:
-        with open(pdf_path, "rb") as f:
-            # Corrected the model name from "prebuilt-layout" to "prebuilt-document"
-            poller = document_intelligence_client.begin_analyze_document(
-                "prebuilt-document", analyze_request=f, content_type="application/octet-stream"
-            )
-        result: AnalyzeResult = poller.result()
-        # operation_id = poller.details["operation_id"]
-
-        extracted_text = ''
-
-        for page in result.pages:
-            for line in page.lines:
-                print(line.content)
-                extracted_text += line.content + ' '
-
-        print("Text extracted from PDF successfully.")
-        return extracted_text.strip()
-    except FileNotFoundError:
-        print(f"PDF file not found at {pdf_path}.")
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-    return ''
-
-
-def generate_conversation(text_content, process_id):
-    conversation_file = f"static/conversations/conversation_{process_id}.txt"
-    prompt = f"""
-    Generate a podcast conversation between two speakers discussing the following content:
-    {text_content}
-
-    The podcast should be brief and start with an introduction explaining the topic and its relevance.
-    Then, the two speakers should have a lively discussion covering the most important points.
-    The two speakers should have different speaking styles.
-
-    Provide the conversation in the following format:
-
-    **Speaker1:** [Speaker 1's dialogue]
-    **Speaker2:** [Speaker 2's dialogue]
-    ...
-
-    Keep each speaker's part short, so that speakers often switch. 
-    Do not give the Speakers any names. Use "Speaker1" and "Speaker2" as placeholders.
-    Ensure the total length is within 15000 tokens.
-    """
-
-    try:
-        response = openai.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "You are a podcast script generator."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        conversation = response.choices[0].message.content.strip()
-        print("Conversation generated by OpenAI.")
-    except Exception as e:
-        print(f"OpenAI API error: {e}")
-        return None
-
-    # Save conversation to file with timestamp
-    try:
-        with open(conversation_file, "w", encoding='utf-8') as f:
-            f.write(conversation)
-        print(f"Conversation saved to {conversation_file}")
-    except Exception as e:
-        print(f"Failed to save conversation file: {e}")
-        return None
-
-    return conversation
-
-
-from pathlib import Path  # Add this import at the top of your file
-
-def synthesize_speech(conversation, process_id, speaker1_voice, speaker2_voice):
-    if not speech_config:
-        print("Speech configuration is not set up properly.")
-        return None
-
-    # Define voices for speakers based on user selection
-    voices = {
-        'Speaker1': speaker1_voice,
-        'Speaker2': speaker2_voice
-    }
-
-    # Split conversation into lines
-    lines = conversation.strip().split('\n')
-
-    # Create a single speech synthesizer instance
-    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
-
-    # Prepare directories for audio segments within static/audio
-    audio_segments_dir = Path('static') / 'audio' / f"audio_segments_{process_id}"
-    try:
-        audio_segments_dir.mkdir(parents=True, exist_ok=True)
-        print(f"Audio segments directory created at {audio_segments_dir}")
-    except Exception as e:
-        print(f"Error creating audio segments directory {audio_segments_dir}: {e}")
-        return None
-
-    for i, line in enumerate(lines, start=1):
-        # Skip empty lines
-        if not line.strip():
-            continue
-
-        # Ignore lines that are action descriptions or annotations
-        if re.match(r'^\*\*\[.*\]\*\*$', line.strip()):
-            continue
-
-        # Define the path for each audio segment
-        audio_filename = f"ssml_output_{i}.wav"
-        audio_filename_path = audio_segments_dir / audio_filename
-
-        if audio_filename_path.exists():
-            # Skip synthesizing this segment if it already exists
-            print(f"Audio segment {audio_filename_path} already exists. Skipping synthesis.")
-            continue
-
-        # Match lines with format "**SpeakerName:** dialogue"
-        match = re.match(r'^\*+(\w+):\*+\s*(.*)', line)
-        if not match:
-            # Try matching lines without '**', e.g., "SpeakerName: dialogue"
-            match = re.match(r'^(\w+):\s*(.*)', line)
-
-        if match:
-            speaker = match.group(1)
-            text = match.group(2)
-            voice = voices.get(speaker, 'en-US-OnyxMultilingualNeuralHD')  # Default voice if speaker not found
-            #voice = 'en-US-OnyxMultilingualNeuralHD'
-            # Construct SSML with the desired voice
-            ssml = f"""
-            <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
-                <voice name='{voice}'>
-                    <p>
-                        {text}
-                    </p>
-                </voice>
-            </speak>
-            """
-            
-            print(f"Synthesizing line {i}: {ssml.strip()}")
-
-            try:
-                result = speech_synthesizer.speak_ssml_async(ssml).get()
-            except Exception as e:
-                print(f"Speech synthesis error for line {i}: {e}")
-                return None
-
-            if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                # Save the audio data to a file
-                try:
-                    with audio_filename_path.open("wb") as audio_file:
-                        audio_file.write(result.audio_data)
-                    print(f"Speech synthesized and saved to {audio_filename_path}")
-                except Exception as e:
-                    print(f"Error saving audio segment {audio_filename_path}: {e}")
-                    return None
-
-            elif result.reason == speechsdk.ResultReason.Canceled:
-                cancellation_details = result.cancellation_details
-                print(f"Speech synthesis canceled: {cancellation_details.reason}")
-                if (cancellation_details.reason == speechsdk.CancellationReason.Error and
-                    cancellation_details.error_details):
-                    print(f"Error details: {cancellation_details.error_details}")
-                    print("Did you set the speech resource key and region values?")
-                return None  # Exit on error
-        else:
-            # Line does not match expected format, skip or handle accordingly
-            print(f"Line {i} does not match expected format and will be skipped.")
-            continue
-
-    # Now combine the audio segments
-    combined_audio = AudioSegment.silent(duration=0)
-
-    # Get list of audio segment files in order
-    try:
-        audio_files = sorted(
-            [f for f in audio_segments_dir.iterdir() if f.suffix == '.wav'],
-            key=lambda x: int(re.findall(r'\d+', x.name)[0])  # Sort based on the number in filename
-        )
-    except Exception as e:
-        print(f"Error listing audio segments in {audio_segments_dir}: {e}")
-        return None
-
-    for audio_file_path in audio_files:
-        if not audio_file_path.exists():
-            print(f"Audio segment file {audio_file_path} is missing. Skipping.")
-            continue
+    # Define a generator to stream audio fragments
+    def generate_audio_stream():
         try:
-            audio_segment = AudioSegment.from_file(audio_file_path, format="wav")
-            combined_audio += audio_segment
+            for audio_data in synthesize_text_stream(answer, process_id, speaker_voice):
+                if audio_data:
+                    yield audio_data
         except Exception as e:
-            print(f"Error loading audio segment {audio_file_path.name}: {e}")
-            continue
+            print(f"Error during audio streaming: {e}")
 
-    # Generate timestamp for the final audio file
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    audio_filename = f"podcast_{timestamp}_{process_id}.wav"
-    output_file_path = Path('static') / audio_filename
+    # Cleanup temporary audio recording after processing
+    cleanup_temp_file(temp_audio_path)
 
-    try:
-        combined_audio.export(output_file_path, format='wav')
-        print(f"Combined audio exported to {output_file_path}")
-    except Exception as e:
-        print(f"Error exporting combined audio: {e}")
-        return None
+    return Response(stream_with_context(generate_audio_stream()), mimetype='audio/wav')
 
-    # Convert the Path to a relative POSIX path for URL usage
-    audio_file_relative = output_file_path.relative_to('static').as_posix()
-    print(f"Audio file relative path: {audio_file_relative}")
-    cleanup_old_files()
-    return audio_file_relative  # Return relative path from 'static'
 
 # Constants for file paths
 EXTRACTED_TEXT_FILE = Path('text_files') /  'extracted_text.txt'
 CONVERSATION_FILE = Path('text_files') /  'conversation.txt'
-
-def save_text_to_file(text, file_path):
-    """Utility function to save text to a file."""
-    try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-        print(f"Text successfully saved to {file_path}")
-    except Exception as e:
-        print(f"Error saving text to {file_path}: {e}")
-
-def load_text_from_file(file_path):
-    """Utility function to load text from a file."""
-    try:
-        if file_path.exists():
-            with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
-            print(f"Text successfully loaded from {file_path}")
-            return text
-        else:
-            print(f"File {file_path} does not exist. Returning empty string.")
-            return ''
-    except Exception as e:
-        print(f"Error loading text from {file_path}: {e}")
-        return ''
-
-def cleanup_old_files():
-    # Define the age threshold (e.g., 1 day)
-    threshold = datetime.now() - timedelta(days=1)
-
-    # Cleanup audio segments
-    audio_segments_parent = Path('static') / 'audio'
-    for dir in audio_segments_parent.glob('audio_segments_*'):
-        #if dir.is_dir() and datetime.fromtimestamp(dir.stat().st_mtime) < threshold:
-            try:
-                shutil.rmtree(dir)
-                logging.info(f"Deleted old audio segments directory: {dir}")
-            except Exception as e:
-                logging.error(f"Error deleting directory {dir}: {e}")
-
-
 
 if __name__ == '__main__':
     # Ensure all necessary directories exist

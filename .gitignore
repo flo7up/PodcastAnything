@@ -4,3 +4,5 @@
 /static/audio
 /static/conversations
 /text_files
+/static
+/__pycache__
