@@ -11,6 +11,7 @@ The application offers three input modes:
 1. **Fetch Text from a Website**: Users can provide a URL, and the application will extract the textual content from the specified website.
 2. **Upload a PDF Document**: Users can upload a PDF file, which is then processed to extract text.
 3. **Manually Insert Text**: Users can directly input text into the provided text area.
+4. **Listen and Interact with the Podcast**: Listen to the Podcast and ask questions based on the provided content at any time
 
 Once the text is provided through any of the input modes, the application processes it to generate a podcast outline and synthesizes audio using Azure Speech Services.
 
