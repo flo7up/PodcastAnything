@@ -50,20 +50,32 @@ cd podcast-anything
 ### Create and Activate a Virtual Environment (Recommended)
 
 # Create a virtual environment named 'venv'
+
+```bash
 python3 -m venv venv
+```
 
 # Activate the virtual environment
+
 # On Windows:
+
+```bash
 venv\Scripts\activate
+```
 
 # On Unix or MacOS:
+
+```bash
 source venv/bin/activate
+```
 
 ### Install Dependencies
 
 Ensure that you have an updated requirements.txt in your project directory. Install the required Python packages using pip:
 
+```bash
 pip install -r requirements.txt
+```
 
 ### Configuration
 
