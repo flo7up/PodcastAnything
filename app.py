@@ -32,9 +32,10 @@ load_dotenv()
 cleanup_old_files()
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-keyx'  # Replace with a secure secret key
+app.secret_key = 'your-secret-keyx123'  
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['VOICE_SAMPLE_DIR'] = "static/voice_samples"
+app.config['EXTRACTED_TEXT_FILE'] = 'extracted_text.txt'  
 
 # Define available voices (Option 1: Hardcoded)
 AVAILABLE_VOICES = [

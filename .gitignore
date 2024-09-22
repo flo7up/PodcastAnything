@@ -9,3 +9,4 @@
 *.pdf
 *.wav
 /utils/__pycache__
+extracted_text.txt

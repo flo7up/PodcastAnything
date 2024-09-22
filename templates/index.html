@@ -158,20 +158,20 @@
                         document.querySelector('.container').appendChild(audioSection);
                     }
                     audioSection.innerHTML = `
-                        <div class="microphone-container">
-                            <h2>Your Podcast is Ready!</h2>
+                        <h2>Your Podcast is Ready!</h2>
                             <p>Use the microphone button to ask additional questions</p>
                             <div class="audio-horizontal-divider"> 
-                            <button id="microphoneButton">
-                                <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
-                            </button>
-                        </div>
-                        <audio controls id="podcastAudio">
-                            <source src="/static/${data.audio_file}?t=${Date.now()}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <a href="/static/${data.audio_file}" download>Download Podcast</a>
-                        <div 
+                                <audio controls id="podcastAudio">
+                                    <source src="/static/${data.audio_file}?t=${Date.now()}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                                <div class="microphone-container">
+                                    <button id="microphoneButton">
+                                        <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
+                                    </button>
+                                </div>
+                            <div 
+                            <a href="/static/${data.audio_file}" download>Download Podcast</a>
                     `;
                     messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
 

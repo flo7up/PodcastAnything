@@ -30,6 +30,9 @@ openai.api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
 MODEL_NAME = os.getenv("AZURE_OPENAI_MODEL_NAME")
 
+print(os.getenv("DOCUMENTINTELLIGENCE_ENDPOINT"))
+print(os.getenv("DOCUMENTINTELLIGENCE_API_KEY"))
+
 # Initialize Azure Document Intelligence client
 try:
     document_intelligence_client = DocumentIntelligenceClient(
