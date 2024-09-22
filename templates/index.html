@@ -122,7 +122,7 @@
                 });
             });
 
-        // Handle Generate Audio Form Submission
+        // Handle Generate Podcast Audio Form Submission
         document.getElementById('generateAudioForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
@@ -135,12 +135,22 @@
             formData.append('speaker2_voice', speaker2Voice);
             formData.append('conversation_text', conversationText);
 
+            var generateAudioButton = document.getElementById('generate_audio');
+            var loadingAudioSpinner = document.getElementById('loading_audio');
+            generateAudioButton.disabled = true;
+            loadingAudioSpinner.style.display = 'inline-block';
+
+            // Send the request along with the outline form data to the server
             fetch('/generate_audio', {
                 method: 'POST',
                 body: formData
             })
+
             .then(response => response.json())
             .then(data => {
+                generateAudioButton.disabled = false;
+                loadingAudioSpinner.style.display = 'none';
+
                 var messageDiv = document.getElementById('message');
                 if (data.status === 'success') {
                     var audioSection = document.getElementById('audioSection');
@@ -223,7 +233,6 @@
 
                 // Variables to manage audio state
                 let isPodcastPlaying = false;
-                
                 let isAnswerPlaying = false;
                 let audioQueue = [];
                 let currentAnswerAudio = null;
@@ -285,8 +294,6 @@
                                 const audioBlob = new Blob(audioChunks, { 'type': 'audio/wav; codecs=opus' });
                                 audioChunks = [];
 
-
-
                                 // Send the audioBlob to the server
                                 sendAudioToServer(audioBlob);
                             };
@@ -308,6 +315,7 @@
                     formData.append('text_content', document.getElementById('text_content').value);
                     formData.append('speaker1_voice', document.getElementById('speaker1_voice').value);
                 
+                    // Send the audioBlob to the server to process the question
                     fetch('/process_question', {
                         method: 'POST',
                         body: formData,
@@ -579,25 +587,26 @@
                     <!-- Audio Spinner -->
                     <div id="loading_audio"></div>
                 </div>
-            
-    
+
+            </form>
             <!-- Audio Output Section -->
             {% if audio_file %}
                 <div class="audio-section" id="audioSection">
                     <h2>Your Podcast is Ready!</h2>
-                    <div class="microphone-container">
-                        <p>Ask a question!</p>
-                        <button id="microphoneButton">
-                            <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
-                        </button>
+                    <p>Use the microphone button to ask additional questions</p>
+                    <div class="audio-horizontal-divider">  
+                        <audio controls id="podcastAudio">
+                            <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="microphone-container">
+                            <button id="microphoneButton">
+                                <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
+                            </button>
+                        </div>
                     </div>
-                    <audio controls id="podcastAudio">
-                        <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download Podcast</a>
+                    <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download</a>
                 </div>
             {% endif %}
-            </form>
         </div>
 </html>

@@ -8,8 +8,9 @@ from datetime import datetime
 from pathlib import Path  
 from werkzeug.utils import secure_filename
 
-# Import utility functions and constants
-from utils import (
+# Import utility functions and constants utils.py in folder utils
+
+from utils.utils import (
     extract_text_from_pdf_pypdf2,
     extract_text_from_website,
     extract_text_from_pdf,
@@ -25,6 +26,7 @@ from utils import (
     transcribe_audio,
     generate_answer
 )
+
 
 load_dotenv()
 cleanup_old_files()
@@ -163,6 +165,7 @@ def generate_outline():
 
 @app.route('/generate_audio', methods=['POST'])
 def generate_audio():
+    print("Generating audio from conversation text...")
     try:
         selected_voice1 = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
         selected_voice2 = request.form.get('speaker2_voice', AVAILABLE_VOICES[1]['name'])
@@ -358,7 +361,6 @@ def process_question():
         return jsonify({'status': 'error', 'message': error_message}), 500
 
 
-
 # Constants for file paths
 EXTRACTED_TEXT_FILE = Path('text_files') /  'extracted_text.txt'
 CONVERSATION_FILE = Path('text_files') /  'conversation.txt'
@@ -372,7 +374,6 @@ if __name__ == '__main__':
                 print(f"Created directory: {folder}")
             except Exception as e:
                 print(f"Error creating directory {folder}: {e}")
-                
                 
     app.run(debug=True)
     

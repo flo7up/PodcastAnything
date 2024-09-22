@@ -160,7 +160,7 @@ textarea {
     display: inline-block;
     margin-top: 10px;
     padding: 10px 20px;
-    background-color: var(--color-info);
+    background-color: var(--border-color);
     color: white;
     text-decoration: none;
     border: 1px solid var(--border-color); /* Added border */
@@ -303,7 +303,7 @@ textarea {
 }
 
 #microphoneButton:hover {
-    background-color: var(--color-primary-hover);
+    background-color: var(--color-danger);
     border-color: var(--color-primary-hover);
 }
 
@@ -323,4 +323,10 @@ p {
     display: none; /* Hidden by default */
     margin-left: 10px;
     vertical-align: middle;
+}
+
+.audio-horizontal-divider {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
 }
