@@ -12,6 +12,8 @@
     --color-light: #f0f2f5;
     --color-dark: #333333;
     --font-family: 'Arial', sans-serif;
+    --border-color: #ccc; /* Added for consistency */
+    --border-radius: 4px; /* Added for consistency */
 }
 
 body {
@@ -21,12 +23,13 @@ body {
 }
 
 .container {
-    max-width: 900px;
-    margin: auto;
-    background-color: #ffffff;
-    padding: 30px;
+    max-width: 1200px; /* Consolidated to the larger max-width */
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 }
 
 h1, h2 {
@@ -35,21 +38,39 @@ h1, h2 {
     margin-bottom: 20px;
 }
 
-/* Textareas and Inputs */
-textarea, input[type="url"], input[type="file"], select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-    margin-bottom: 15px;
-    box-sizing: border-box;
+.logo-container {
+    text-align: center;
+    margin-bottom: 30px; /* Consistent margin */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-container img {
+    width: 100px;
+    height: 100px;
 }
 
 label {
     font-weight: bold;
     display: block;
     margin-bottom: 5px;
+}
+
+/* Textareas and Inputs */
+textarea, input[type="url"], input[type="file"], select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+
+textarea {
+    padding: 10px; /* Override padding for textarea if needed */
+    border-radius: 5px;
 }
 
 /* Buttons */
@@ -64,11 +85,11 @@ label {
 .buttons input {
     padding: 10px 20px;
     font-size: 16px;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid var(--border-color); /* Added border */
+    border-radius: var(--border-radius);
     cursor: pointer;
     color: white;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .buttons input#upload_pdf {
@@ -110,35 +131,46 @@ label {
     cursor: not-allowed;
 }
 
-/* Error Messages */
+/* Error and Success Messages */
 .error {
     color: var(--color-danger);
     margin-top: 15px;
     font-weight: bold;
 }
 
+.success {
+    color: green;
+}
+
 /* Audio Section */
 .audio-section {
-    margin-top: 25px;
+    margin-top: 20px; /* Unified margin */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
 }
 
 .audio-section audio {
     width: 100%;
-    margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 .audio-section a {
     display: inline-block;
+    margin-top: 10px;
     padding: 10px 20px;
     background-color: var(--color-info);
     color: white;
     text-decoration: none;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
+    border: 1px solid var(--border-color); /* Added border */
+    border-radius: 5px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .audio-section a:hover {
     background-color: var(--color-info-hover);
+    border-color: var(--color-info-hover);
 }
 
 /* Voice Selectors */
@@ -153,10 +185,44 @@ label {
     min-width: 200px;
 }
 
-@media (max-width: 576px) {
-    .voice-selectors {
-        flex-direction: column;
-    }
+/* Override for select elements within voice-selection-container */
+.voice-selection-container {
+    display: flex;
+    align-items: center; /* Ensures vertical alignment */
+}
+
+.voice-selection-container select {
+    width: auto; /* Override the general width: 100% */
+    flex: 1; /* Allows the select to take available space */
+    margin-right: 10px; /* Space between select and button */
+}
+
+.voice-selection-container button.play-voice-sample {
+    flex: none; /* Prevents the button from stretching */
+}
+
+/* Ensure play-voice-sample buttons are aligned properly */
+.play-voice-sample {
+    border: 1px solid var(--border-color); /* Added border */
+    background-color: #ccc;
+    margin-bottom: 15px; /* Remove bottom margin to align with select */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    padding: 2px; /* Added padding for better click area */
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.play-voice-sample:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.play-voice-sample i {
+    color: white; /* Ensures the play icon is visible */
+    padding: 10px
 }
 
 /* Options Container */
@@ -170,19 +236,28 @@ label {
     flex: 1;
     background-color: #f9f9f9;
     padding: 20px;
-    
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-    /* add border */
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 5%;
 }
 
-.option:last-child {
-    margin-right: 0;
+.optiondivider {
+    margin-right: 20px;
+    padding-left: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @media (max-width: 768px) {
     .options-container {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+    .voice-selectors {
         flex-direction: column;
     }
 }
@@ -205,52 +280,21 @@ label {
     100% { transform: rotate(360deg); }
 }
 
-/* Logo Container */
-.logo-container {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.logo-container img {
-    width: 100px;
-    height: 100px;
-}
-
-/* Additional Styling */
-.form-group {
-    margin-bottom: 15px;
-}
-
-.audio-section a {
-    margin-top: 10px;
-}
-
-.optiondivider {
-    margin-right: 20px;
-    padding-left: 20px;
-    text-align: center;
-    /* vertically align text center;*/
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
+/* Microphone Button */
 .microphone-container {
-    text-align: left;
-    margin-top: 20px;
-    align-items: center;
+    text-align: center;
+    margin-top: 10px; /* Unified margin */
 }
 
 #microphoneButton {
-    background: none;
-    border: none;
+    background-color: transparent;
+    border: 1px solid var(--border-color); /* Added border */
+    border-radius: 15%;
     cursor: pointer;
     padding: 5px;
     margin: 5px;
     display: inline-block;
-    border-radius: 15%;
-    border: 1px solid #ccc;
-
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 #microphoneButton img {
@@ -260,4 +304,23 @@ label {
 
 #microphoneButton:hover {
     background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+/* Paragraph Styling */
+p {
+    margin-bottom: 10px;
+    color: grey;
+}
+
+#loading_audio {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid var(--color-primary); /* Blue */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: none; /* Hidden by default */
+    margin-left: 10px;
+    vertical-align: middle;
 }

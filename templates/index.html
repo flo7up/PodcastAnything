@@ -4,92 +4,9 @@
     <meta charset="UTF-8">
     <title>Podcast Anything</title>
     
-    <style>
-        /* Main container styling */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        /* Audio section */
-        .audio-section {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-
-        /* Audio element */
-        .audio-section audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        /* Download link */
-        .audio-section a {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-
-        /* Centered logo */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        /* Message styling */
-        #message {
-            margin-top: 20px;
-        }
-
-        /* Success and error messages */
-        .success {
-            color: green;
-        }
-        .error {
-            color: red;
-        }
-
-        /* Other form and text area styling */
-        .buttons {
-            margin-top: 10px;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        /* Styling for microphone button */
-        .microphone-container {
-            text-align: center;
-            margin-top: 10px;
-        }
-        #microphoneButton {
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-        }
-        #microphoneButton img {
-            width: 50px;
-            height: 50px;
-        }
-    </style>
-    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
     <script>
         // Function to handle autosave
         function autoSaveText(field, textType) {
@@ -208,22 +125,32 @@
             // Handle Generate Audio Form Submission
             document.getElementById('generateAudioForm').addEventListener('submit', function(event) {
                 event.preventDefault();
-
+            
                 var formData = new FormData();
                 var speaker1Voice = document.getElementById('speaker1_voice').value;
                 var speaker2Voice = document.getElementById('speaker2_voice').value;
                 var conversationText = document.getElementById('conversation_text').value;
-
+            
                 formData.append('speaker1_voice', speaker1Voice);
                 formData.append('speaker2_voice', speaker2Voice);
                 formData.append('conversation_text', conversationText);
-
+            
+                // Disable the Generate Audio button and show the spinner
+                var generateAudioButton = document.getElementById('generate_audio');
+                var loadingAudioSpinner = document.getElementById('loading_audio');
+                generateAudioButton.disabled = true;
+                loadingAudioSpinner.style.display = 'inline-block';
+            
                 fetch('/generate_audio', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Re-enable the button and hide the spinner
+                    generateAudioButton.disabled = false;
+                    loadingAudioSpinner.style.display = 'none';
+            
                     var messageDiv = document.getElementById('message');
                     if (data.status === 'success') {
                         var audioSection = document.getElementById('audioSection');
@@ -248,14 +175,21 @@
                             <a href="/static/${data.audio_file}" download>Download Podcast</a>
                         `;
                         messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
-
+            
                         // After adding the new audioSection with microphoneButton, attach the event listeners
                         attachAudioManagement();
                     } else {
                         messageDiv.innerHTML = `<p class="error">${data.message}</p>`;
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    // Re-enable the button and hide the spinner
+                    generateAudioButton.disabled = false;
+                    loadingAudioSpinner.style.display = 'none';
+                    console.error('Error:', error);
+                    var messageDiv = document.getElementById('message');
+                    messageDiv.innerHTML = `<p class="error">An error occurred while generating the audio. Please try again.</p>`;
+                });
             });
 
             // Handle Extract Website Form Submission
@@ -518,6 +452,35 @@
                 }
             }
 
+            document.querySelectorAll('.play-voice-sample').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var voiceInputId = this.getAttribute('data-voice-input-id');
+                    var voiceSelect = document.getElementById(voiceInputId);
+                    var voiceName = voiceSelect.value;
+        
+                    // Send request to get voice sample
+                    fetch('/get_voice_sample', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({'voice_name': voiceName})
+                    })
+                    .then(response => response.arrayBuffer())
+                    .then(buffer => {
+                        const audioBlob = new Blob([buffer], { type: 'audio/wav' });
+                        const audioURL = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioURL);
+                        audio.play();
+                        audio.onended = function() {
+                            URL.revokeObjectURL(audioURL);
+                        };
+                    })
+                    .catch(error => {
+                        console.error('Error fetching voice sample:', error);
+                    });
+                });
+            });
             // Attach audio management if microphoneButton is present on load
             // This ensures that if the audioSection is already present when the page loads, the event listeners are attached
             attachAudioManagement();
@@ -529,22 +492,20 @@
     </head>
     <body>
         <div class="container">
-            <h1>Podcast Anything</h1>
-    
             <!-- Centered logo -->
             <div class="logo-container">
+                <h1>Podcast Anything</h1>
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Podcast Anything Logo">
             </div>
     
             <!-- Message Div for displaying messages -->
             <div id="message"></div>
     
-            <h2>Input Content</h2>
+            <h2>Podcast Content</h2>
+            <p>Generate a podcast outline from a PDF or website content or just paste the content into the text field below.</p>
             <div class="options-container">
                 <!-- Option 1: Upload PDF -->
                 <div class="option">
-                    <h2>Upload PDF</h2>
-                    
                     <!-- Form to Upload PDF -->
                     <form id="uploadPdfForm" enctype="multipart/form-data">
                         <label for="pdf_file">Select PDF to Upload:</label>
@@ -572,8 +533,6 @@
                 </div>  
                 <!-- Option 2: Extract Text from Website -->
                 <div class="option">
-                    <h2>Extract Text from Website</h2>
-                    
                     <!-- Form to Extract Text from Website -->
                     <form id="extractWebsiteForm">
                         <label for="website_url">Website URL:</label>
@@ -589,7 +548,7 @@
             <!-- Generate Podcast Outline Section -->
             
             <form id="outlineForm">
-                <label for="text_content">Enter or Edit Extracted Text:</label>
+                <label for="text_content">Content for Generating the Podcast Outline</label>
                 <textarea name="text_content" id="text_content" rows="10" required>{{ text_content }}</textarea>
                 
                 <div class="buttons">
@@ -601,39 +560,53 @@
             
             <!-- Step 4: Generate Audio Podcast -->
             <h2>Podcast Outline</h2>
+            <p>Select the speak voices and generate an audio podcast from the conversation outline below.</p>
             <form id="generateAudioForm">
                 <div class="form-group voice-selection">
-                    <label>Select Voices for Speakers:</label>
                     <div class="voice-selectors">
                         <div class="voice-selector">
-                            <label for="speaker1_voice">Speaker 1:</label>
-                            <select name="speaker1_voice" id="speaker1_voice" required>
-                                {% for voice in available_voices %}
-                                    <option value="{{ voice.name }}" {% if voice.name == selected_voice1 %}selected{% endif %}>
-                                        {{ voice.display_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            <label for="speaker1_voice">Speaker 1 Voice</label>
+                            <div class="voice-selection-container">
+                                <select name="speaker1_voice" id="speaker1_voice" required>
+                                    {% for voice in available_voices %}
+                                        <option value="{{ voice.name }}" {% if voice.name == selected_voice1 %}selected{% endif %}>
+                                            {{ voice.display_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <!-- Play Button for Speaker 1 Voice -->
+                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker1_voice">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
                         </div>
-                
+            
                         <div class="voice-selector">
-                            <label for="speaker2_voice">Speaker 2:</label>
-                            <select name="speaker2_voice" id="speaker2_voice" required>
-                                {% for voice in available_voices %}
-                                    <option value="{{ voice.name }}" {% if voice.name == selected_voice2 %}selected{% endif %}>
-                                        {{ voice.display_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            <label for="speaker2_voice">Speaker 2 Voice</label>
+                            <div class="voice-selection-container">
+                                <select name="speaker2_voice" id="speaker2_voice" required>
+                                    {% for voice in available_voices %}
+                                        <option value="{{ voice.name }}" {% if voice.name == selected_voice2 %}selected{% endif %}>
+                                            {{ voice.display_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <!-- Play Button for Speaker 2 Voice -->
+                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker2_voice">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <label for="conversation_text">Review/Edit Conversation Outline:</label>
+            
+                <label for="conversation_text">Conversation Outline</label>
                 <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here..." required>{{ conversation }}</textarea>
-                
+            
                 <div class="buttons">
                     <input type="submit" name="generate_audio" id="generate_audio" value="Generate Audio">
+                    <!-- Audio Spinner -->
+                    <div id="loading_audio"></div>
                 </div>
             </form>
     
@@ -653,8 +626,6 @@
                     </audio>
                     <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download Podcast</a>
                 </div>
-                
             {% endif %}
         </div>
-    </body>
 </html>

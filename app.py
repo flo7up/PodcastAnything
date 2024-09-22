@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime
 from pathlib import Path  
+from werkzeug.utils import secure_filename
 
 # Import utility functions and constants
 from utils import (
@@ -31,6 +32,7 @@ cleanup_old_files()
 app = Flask(__name__)
 app.secret_key = 'your-secret-keyx'  # Replace with a secure secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['VOICE_SAMPLE_DIR'] = "static/voice_samples"
 
 # Define available voices (Option 1: Hardcoded)
 AVAILABLE_VOICES = [
@@ -38,7 +40,7 @@ AVAILABLE_VOICES = [
     {'name': 'en-US-GuyNeural', 'display_name': 'Guy'},
     {'name': 'en-US-JennyNeural', 'display_name': 'Jenny'},
     {'name': 'en-US-AriaNeural', 'display_name': 'Aria'},
-    {'name': 'en-US-LiamNeural', 'display_name': 'Liam'},
+    {'name': 'en-CA-LiamNeural', 'display_name': 'Liam'},
     # Add more voices as needed
 ]
 
@@ -189,6 +191,56 @@ def generate_audio():
         print(error)
         return jsonify({'status': 'error', 'message': error})
     
+@app.route('/get_voice_sample', methods=['POST'])
+def get_voice_sample():
+    try:
+        # Retrieve voice name from the request
+        data = request.get_json()
+        voice_name = data.get('voice_name')
+
+        if not voice_name:
+            return jsonify({'status': 'error', 'message': 'Voice name not provided'}), 400
+        
+        # Ensure the directory for storing voice samples exists
+        os.makedirs(app.config['VOICE_SAMPLE_DIR'], exist_ok=True)
+ 
+        # Define the path for the voice sample
+        sanitized_voice_name = secure_filename(voice_name)  # Use a secure filename
+        sample_file_path = os.path.join(app.config['VOICE_SAMPLE_DIR'], f"{sanitized_voice_name}_sample.wav")
+
+        # Check if the sample file already exists
+        if os.path.exists(sample_file_path):
+            print(f"Using cached voice sample for: {voice_name}")
+            # If the sample exists, return it directly
+            with open(sample_file_path, 'rb') as audio_file:
+                return Response(audio_file.read(), mimetype='audio/wav')
+
+        # If the sample doesn't exist, synthesize it
+        sample_text = "Hi there, I'd love to be your podcast host!"
+        audio_chunks = []
+
+        # Generate the voice sample using synthesize_text_stream
+        for audio_data in synthesize_text_stream(sample_text, '', voice_name):
+            if audio_data:
+                audio_chunks.append(audio_data)
+
+        if not audio_chunks:
+            return jsonify({'status': 'error', 'message': 'Failed to generate voice sample'}), 500
+
+        # Combine the audio chunks into one bytes object
+        combined_audio_data = b''.join(audio_chunks)
+
+        # Save the synthesized audio to a file for future use
+        with open(sample_file_path, 'wb') as audio_file:
+            audio_file.write(combined_audio_data)
+
+        # Return the combined audio data as a response
+        return Response(combined_audio_data, mimetype='audio/wav')
+
+    except Exception as e:
+        error = f"Error generating voice sample: {e}"
+        print(error)
+        return jsonify({'status': 'error', 'message': error}), 500
 
 @app.route('/extract_website', methods=['POST'])
 def extract_website():
@@ -304,7 +356,7 @@ CONVERSATION_FILE = Path('text_files') /  'conversation.txt'
 
 if __name__ == '__main__':
     # Ensure all necessary directories exist
-    for folder in ['uploads', 'static/conversations', 'static/audio', 'text_files']:
+    for folder in ['uploads', 'static/conversations', 'static/audio', 'text_files', 'static/voice_samples']:
         if not os.path.exists(folder):
             try:
                 os.makedirs(folder)

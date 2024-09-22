@@ -12,6 +12,7 @@ import logging
 from pydub import AudioSegment
 import os
 import openai
+import time
 import azure.cognitiveservices.speech as speechsdk
 from azure.ai.documentintelligence.models import AnalyzeResult
 from azure.core.credentials import AzureKeyCredential
@@ -401,10 +402,12 @@ def split_text_into_sentences(text):
 
     return chunks
 
-def synthesize_text_stream(text, process_id, voice_name):
+
+def synthesize_text_stream(text, process_id, voice_name, max_retries=3):
     """
     Splits the text into sentences and synthesizes each sentence.
     Yields each synthesized audio fragment as bytes for streaming.
+    Implements a retry mechanism to handle throttling errors.
     """
     if not speech_config:
         print("Speech configuration is not set up properly.")
@@ -416,32 +419,61 @@ def synthesize_text_stream(text, process_id, voice_name):
     sentences = split_text_into_sentences(text)
 
     for i, sentence in enumerate(sentences, start=1):
-        ssml = f"""
-        <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
-            <voice name='{voice_name}'>
-                <p>
-                    {sentence}
-                </p>
-            </voice>
-        </speak>
-        """
-        print(f"Synthesizing sentence {i}: {sentence}")
+        retries = 0
+        while retries <= max_retries:
+            ssml = f"""
+            <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
+                <voice name='{voice_name}'>
+                    <p>{sentence}</p>
+                </voice>
+            </speak>
+            """
+            print(f"Synthesizing sentence {i} (Attempt {retries + 1}): {sentence}")
 
-        try:
-            result = synthesizer.speak_ssml_async(ssml).get()
-        except Exception as e:
-            print(f"Speech synthesis error for sentence {i}: {e}")
-            continue
+            try:
+                result = synthesizer.speak_ssml_async(ssml).get()
 
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            yield result.audio_data
-            print(f"Synthesized sentence {i} successfully.")
-        elif result.reason == speechsdk.ResultReason.Canceled:
-            cancellation_details = result.cancellation_details
-            print(f"Speech synthesis canceled: {cancellation_details.reason}")
-            if cancellation_details.reason == speechsdk.CancellationReason.Error and cancellation_details.error_details:
-                print(f"Error details: {cancellation_details.error_details}")
-            continue
+                if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+                    yield result.audio_data
+                    print(f"Synthesized sentence {i} successfully.")
+                    break  # Exit the retry loop for this sentence
+
+                elif result.reason == speechsdk.ResultReason.Canceled:
+                    cancellation_details = result.cancellation_details
+                    print(f"Speech synthesis canceled: {cancellation_details.reason}")
+                    if cancellation_details.reason == speechsdk.CancellationReason.Error and cancellation_details.error_details:
+                        print(f"Error details: {cancellation_details.error_details}")
+                        if "Error code: 4429" in cancellation_details.error_details:
+                            # Throttling error, wait and retry
+                            retries += 1
+                            if retries <= max_retries:
+                                wait_time = 5 * retries  # Exponential backoff
+                                print(f"Throttling error encountered. Waiting {wait_time} seconds before retrying...")
+                                time.sleep(wait_time)
+                                continue
+                            else:
+                                print(f"Exceeded maximum retries for sentence {i}. Skipping.")
+                                break
+                        else:
+                            # Other errors, do not retry
+                            print(f"Non-throttling error encountered. Skipping sentence {i}.")
+                            break
+                    else:
+                        # Other cancellation reasons
+                        print(f"Cancellation reason: {cancellation_details.reason}. Skipping sentence {i}.")
+                        break
+
+            except Exception as e:
+                print(f"Speech synthesis error for sentence {i}: {e}")
+                retries += 1
+                if retries <= max_retries:
+                    wait_time = 5 * retries  # Exponential backoff
+                    print(f"Exception encountered. Waiting {wait_time} seconds before retrying...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"Exceeded maximum retries for sentence {i} due to exception. Skipping.")
+                    break
 
 def save_text_to_file(text, file_path):
     """Utility function to save text to a file."""
