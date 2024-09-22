@@ -40,43 +40,33 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             // Handle Upload PDF Form Submission
-            document.getElementById('uploadPdfForm').addEventListener('submit', function(event) {
+            // Handle Upload and Convert PDF Form Submission
+            document.getElementById('uploadConvertPdfForm').addEventListener('submit', function(event) {
                 event.preventDefault();
-
+            
                 var formData = new FormData();
                 var pdfFile = document.getElementById('pdf_file').files[0];
-                formData.append('pdf_file', pdfFile);
-
-                fetch('/upload_pdf', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    var messageDiv = document.getElementById('message');
-                    if (data.status === 'success') {
-                        messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
-                    } else {
-                        messageDiv.innerHTML = `<p class="error">${data.message}</p>`;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            });
-
-            // Handle Convert PDF Form Submission
-            document.getElementById('convertPdfForm').addEventListener('submit', function(event) {
-                event.preventDefault();
-
-                var formData = new FormData();
                 var useAzure = document.getElementById('use_azure_doc_intelligence').checked;
+            
+                formData.append('pdf_file', pdfFile);
                 formData.append('use_azure_doc_intelligence', useAzure ? 'true' : 'false');
-
-                fetch('/convert_pdf', {
+            
+                // Disable the button and show the spinner (if spinner is added)
+                var uploadConvertButton = document.getElementById('upload_convert_pdf');
+                // var loadingUploadConvertSpinner = document.getElementById('loading_upload_convert_pdf');
+                uploadConvertButton.disabled = true;
+                // loadingUploadConvertSpinner.style.display = 'inline-block';
+            
+                fetch('/upload_and_convert_pdf', { // Updated endpoint
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Re-enable the button and hide the spinner
+                    uploadConvertButton.disabled = false;
+                    // loadingUploadConvertSpinner.style.display = 'none';
+            
                     var messageDiv = document.getElementById('message');
                     if (data.status === 'success') {
                         document.getElementById('text_content').value = data.text_content;
@@ -85,7 +75,14 @@
                         messageDiv.innerHTML = `<p class="error">${data.message}</p>`;
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    // Re-enable the button and hide the spinner
+                    uploadConvertButton.disabled = false;
+                    // loadingUploadConvertSpinner.style.display = 'none';
+                    console.error('Error:', error);
+                    var messageDiv = document.getElementById('message');
+                    messageDiv.innerHTML = `<p class="error">An error occurred while uploading and converting the PDF. Please try again.</p>`;
+                });
             });
 
             // Handle Generate Outline Form Submission
@@ -161,7 +158,6 @@
                         document.querySelector('.container').appendChild(audioSection);
                     }
                     audioSection.innerHTML = `
-                        
                         <div class="microphone-container">
                             <h2>Your Podcast is Ready!</h2>
                             <p>Use the microphone button to ask additional questions</p>
@@ -488,25 +484,20 @@
             <div class="options-container">
                 <!-- Option 1: Upload PDF -->
                 <div class="option">
-                    <!-- Form to Upload PDF -->
-                    <form id="uploadPdfForm" enctype="multipart/form-data">
-                        <label for="pdf_file">Select PDF to Upload:</label>
+                    <!-- Combined Form to Upload and Convert PDF -->
+                    <form id="uploadConvertPdfForm" enctype="multipart/form-data">
+                        
                         <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required>
                         
-                        <div class="buttons">
-                            <input type="submit" name="upload_pdf" id="upload_pdf" value="Upload PDF">
-                        </div>
-                    </form>
-                    
-                    <!-- Form to Convert PDF to Text -->
-                    <form id="convertPdfForm">
                         <label for="use_azure_doc_intelligence">
                             <input type="checkbox" name="use_azure_doc_intelligence" id="use_azure_doc_intelligence" checked>
                             Use Azure Document Intelligence
                         </label>
                         
                         <div class="buttons">
-                            <input type="submit" name="convert_pdf" id="convert_pdf" value="Convert PDF to Text">
+                            <input type="submit" name="upload_convert_pdf" id="upload_convert_pdf" value="Extract Text from PDF">
+                            <!-- Optional: Spinner for this button if needed -->
+                            <!-- <div id="loading_upload_convert_pdf"></div> -->
                         </div>
                     </form>
                 </div>
@@ -517,7 +508,7 @@
                 <div class="option">
                     <!-- Form to Extract Text from Website -->
                     <form id="extractWebsiteForm">
-                        <label for="website_url">Website URL:</label>
+                        
                         <input type="url" name="website_url" id="website_url" placeholder="Enter website URL here..." required>
                         
                         <div class="buttons">

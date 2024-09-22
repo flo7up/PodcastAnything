@@ -62,71 +62,78 @@ def index():
                            selected_voice1=session.get('speaker1_voice', AVAILABLE_VOICES[0]['name']),
                            selected_voice2=session.get('speaker2_voice', AVAILABLE_VOICES[1]['name']))
 
-@app.route('/upload_pdf', methods=['POST'])
-def upload_pdf():
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}
+
+
+@app.route('/upload_and_convert_pdf', methods=['POST'])
+def upload_and_convert_pdf():
     try:
-        pdf_file = request.files.get('pdf_file')
-        if pdf_file and pdf_file.filename != '':
+        # Check if the POST request has the file part
+        if 'pdf_file' not in request.files:
+            error = 'No PDF file part in the request.'
+            print(error)
+            return jsonify({'status': 'error', 'message': error}), 400
+
+        pdf_file = request.files['pdf_file']
+
+        # If user does not select file, browser may submit an empty part without filename
+        if pdf_file.filename == '':
+            error = 'No PDF file selected for upload.'
+            print(error)
+            return jsonify({'status': 'error', 'message': error}), 400
+
+        if pdf_file and allowed_file(pdf_file.filename):
+            # Generate a unique filename
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             unique_id = uuid.uuid4().hex
-            filename = f"{timestamp}_{unique_id}_{pdf_file.filename}"
+            filename = f"{timestamp}_{unique_id}_{secure_filename(pdf_file.filename)}"
             pdf_path = Path(app.config['UPLOAD_FOLDER']) / filename
+
+            # Save the PDF file
             pdf_file.save(pdf_path)
             session['pdf_path'] = str(pdf_path)
-            message = 'PDF uploaded successfully. You can now convert it to text.'
             print(f"PDF uploaded and saved to {pdf_path}")
-            return jsonify({'status': 'success', 'message': message})
-        else:
-            error = 'No PDF file selected for upload.'
-            print("No PDF file selected for upload.")
-            return jsonify({'status': 'error', 'message': error})
-    except Exception as e:
-        error = f"Error during PDF upload: {e}"
-        print(error)
-        return jsonify({'status': 'error', 'message': error})
 
-@app.route('/convert_pdf', methods=['POST'])
-def convert_pdf():
-    try:
-        pdf_path = session.get('pdf_path', None)
-        if not pdf_path:
-            error = 'No PDF file path found in session. Please upload a PDF first.'
-            print("No PDF file path found in session for conversion.")
-            return jsonify({'status': 'error', 'message': error})
-        elif not Path(pdf_path).exists():
-            error = f'PDF file not found at {pdf_path}. Please upload the PDF again.'
-            print(f"PDF file not found at {pdf_path}.")
-            return jsonify({'status': 'error', 'message': error})
-        else:
+            # Retrieve the 'use_azure_doc_intelligence' flag
             use_azure = request.form.get('use_azure_doc_intelligence') == 'true'
+
+            # Convert PDF to text based on the selected method
             if use_azure:
                 text_content = extract_text_from_pdf(pdf_path)
-                if text_content:
-                    save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
-                    session['extracted_text'] = text_content
-                    message = 'PDF converted to text successfully using Azure Document Intelligence.'
-                    print("PDF converted to text successfully using Azure Document Intelligence.")
-                    return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
-                else:
-                    error = 'Failed to extract text from PDF using Azure Document Intelligence.'
-                    print("Failed to extract text from PDF using Azure Document Intelligence.")
-                    return jsonify({'status': 'error', 'message': error})
+                method_used = 'Azure Document Intelligence'
             else:
                 text_content = extract_text_from_pdf_pypdf2(pdf_path)
-                if text_content:
-                    save_text_to_file(text_content, EXTRACTED_TEXT_FILE)
-                    session['extracted_text'] = text_content
-                    message = 'PDF converted to text successfully using alternative method.'
-                    print("PDF converted to text successfully using alternative method.")
-                    return jsonify({'status': 'success', 'message': message, 'text_content': text_content})
-                else:
-                    error = 'Failed to extract text from PDF using alternative method.'
-                    print("Failed to extract text from PDF using alternative method.")
-                    return jsonify({'status': 'error', 'message': error})
+                method_used = 'Alternative Method'
+
+            if text_content:
+                # Save the extracted text to a file (optional)
+                text_file_path = Path(app.config['EXTRACTED_TEXT_FILE'])
+                save_text_to_file(text_content, text_file_path)
+
+                # Store the extracted text in the session
+                session['extracted_text'] = text_content
+                message = f'PDF uploaded and converted to text successfully using {method_used}.'
+                print(message)
+
+                return jsonify({
+                    'status': 'success',
+                    'message': message,
+                    'text_content': text_content
+                })
+            else:
+                error = f'Failed to extract text from PDF using {method_used}.'
+                print(error)
+                return jsonify({'status': 'error', 'message': error}), 500
+        else:
+            error = 'Invalid file type. Only PDF files are allowed.'
+            print(error)
+            return jsonify({'status': 'error', 'message': error}), 400
+
     except Exception as e:
-        error = f"Error during PDF conversion: {e}"
+        error = f"Error during upload and conversion: {e}"
         print(error)
-        return jsonify({'status': 'error', 'message': error})
+        return jsonify({'status': 'error', 'message': error}), 500
 
 @app.route('/generate_outline', methods=['POST'])
 def generate_outline():
