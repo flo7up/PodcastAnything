@@ -122,75 +122,58 @@
                 });
             });
 
-            // Handle Generate Audio Form Submission
-            document.getElementById('generateAudioForm').addEventListener('submit', function(event) {
-                event.preventDefault();
-            
-                var formData = new FormData();
-                var speaker1Voice = document.getElementById('speaker1_voice').value;
-                var speaker2Voice = document.getElementById('speaker2_voice').value;
-                var conversationText = document.getElementById('conversation_text').value;
-            
-                formData.append('speaker1_voice', speaker1Voice);
-                formData.append('speaker2_voice', speaker2Voice);
-                formData.append('conversation_text', conversationText);
-            
-                // Disable the Generate Audio button and show the spinner
-                var generateAudioButton = document.getElementById('generate_audio');
-                var loadingAudioSpinner = document.getElementById('loading_audio');
-                generateAudioButton.disabled = true;
-                loadingAudioSpinner.style.display = 'inline-block';
-            
-                fetch('/generate_audio', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Re-enable the button and hide the spinner
-                    generateAudioButton.disabled = false;
-                    loadingAudioSpinner.style.display = 'none';
-            
-                    var messageDiv = document.getElementById('message');
-                    if (data.status === 'success') {
-                        var audioSection = document.getElementById('audioSection');
-                        if (!audioSection) {
-                            audioSection = document.createElement('div');
-                            audioSection.id = 'audioSection';
-                            audioSection.className = 'audio-section';
-                            document.body.appendChild(audioSection);
-                        }
-                        audioSection.innerHTML = `
-                            <h2>Your Podcast is Ready!</h2>
-                            <div class="microphone-container">
-                                <p>Ask a question!</p>
-                                <button id="microphoneButton">
-                                    <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
-                                </button>
-                            </div>
-                            <audio controls id="podcastAudio">
-                                <source src="/static/${data.audio_file}" type="audio/wav">
-                                Your browser does not support the audio element.
-                            </audio>
-                            <a href="/static/${data.audio_file}" download>Download Podcast</a>
-                        `;
-                        messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
-            
-                        // After adding the new audioSection with microphoneButton, attach the event listeners
-                        attachAudioManagement();
-                    } else {
-                        messageDiv.innerHTML = `<p class="error">${data.message}</p>`;
+        // Handle Generate Audio Form Submission
+        document.getElementById('generateAudioForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var formData = new FormData();
+            var speaker1Voice = document.getElementById('speaker1_voice').value;
+            var speaker2Voice = document.getElementById('speaker2_voice').value;
+            var conversationText = document.getElementById('conversation_text').value;
+
+            formData.append('speaker1_voice', speaker1Voice);
+            formData.append('speaker2_voice', speaker2Voice);
+            formData.append('conversation_text', conversationText);
+
+            fetch('/generate_audio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var messageDiv = document.getElementById('message');
+                if (data.status === 'success') {
+                    var audioSection = document.getElementById('audioSection');
+                    if (!audioSection) {
+                        audioSection = document.createElement('div');
+                        audioSection.id = 'audioSection';
+                        audioSection.className = 'audio-section';
+                        document.querySelector('.container').appendChild(audioSection);
                     }
-                })
-                .catch(error => {
-                    // Re-enable the button and hide the spinner
-                    generateAudioButton.disabled = false;
-                    loadingAudioSpinner.style.display = 'none';
-                    console.error('Error:', error);
-                    var messageDiv = document.getElementById('message');
-                    messageDiv.innerHTML = `<p class="error">An error occurred while generating the audio. Please try again.</p>`;
-                });
-            });
+                    audioSection.innerHTML = `
+                        <h2>Your Podcast is Ready!</h2>
+                        <div class="microphone-container">
+                            <p>Ask a question!</p>
+                            <button id="microphoneButton">
+                                <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
+                            </button>
+                        </div>
+                        <audio controls id="podcastAudio">
+                            <source src="/static/${data.audio_file}?t=${Date.now()}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <a href="/static/${data.audio_file}" download>Download Podcast</a>
+                    `;
+                    messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
+
+                    // After adding the new audioSection with microphoneButton, attach the event listeners
+                    attachAudioManagement();
+                } else {
+                    messageDiv.innerHTML = `<p class="error">${data.message}</p>`;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
 
             // Handle Extract Website Form Submission
             document.getElementById('extractWebsiteForm').addEventListener('submit', function(event) {
@@ -238,11 +221,9 @@
                 }
                 const podcastAudio = document.getElementById("podcastAudio");
 
-                // Initialize preRecordedAudio inside the function to ensure it's available
-                const preRecordedAudio = new Audio('{{ url_for('static', filename='prerecorded/thank_you_for_asking.wav') }}');
-
                 // Variables to manage audio state
                 let isPodcastPlaying = false;
+                
                 let isAnswerPlaying = false;
                 let audioQueue = [];
                 let currentAnswerAudio = null;
@@ -263,33 +244,23 @@
                     });
                 }
 
-                // Handle Microphone Button Click
                 microphoneButton.addEventListener("click", function () {
                     if (!podcastAudio) {
                         console.warn("No podcastAudio element found.");
                         return;
                     }
-
+                
                     // Remember if the podcast was playing
                     let wasPodcastPlaying = !podcastAudio.paused;
-
+                
                     // Stop the podcast
                     if (wasPodcastPlaying) {
                         podcastAudio.pause();
                     }
-
-                    // Stop any answer audio playing
-                    if (isAnswerPlaying && currentAnswerAudio) {
-                        currentAnswerAudio.pause();
-                        URL.revokeObjectURL(currentAnswerAudio.src);
-                        audioQueue = []; // Clear the queue
-                        isAnswerPlaying = false;
-                        isFragmentPlaying = false;
-                    }
-
+                
                     // Start recording the user's question
                     startRecording();
-
+                
                     // Store whether the podcast was playing, so we can resume it later
                     isPodcastPlaying = wasPodcastPlaying;
                 });
@@ -314,16 +285,7 @@
                                 const audioBlob = new Blob(audioChunks, { 'type': 'audio/wav; codecs=opus' });
                                 audioChunks = [];
 
-                                // Play the pre-recorded "Thank you for asking!" audio after recording stops
-                                setTimeout(() => {
-                                    preRecordedAudio.play()
-                                        .then(() => {
-                                            console.log("Acknowledgment audio played.");
-                                        })
-                                        .catch(error => {
-                                            console.error('Error playing acknowledgment audio:', error);
-                                        });
-                                }, 2000);
+
 
                                 // Send the audioBlob to the server
                                 sendAudioToServer(audioBlob);
@@ -343,7 +305,9 @@
                 function sendAudioToServer(audioBlob) {
                     const formData = new FormData();
                     formData.append('audio_data', audioBlob);
-
+                    formData.append('text_content', document.getElementById('text_content').value);
+                    formData.append('speaker1_voice', document.getElementById('speaker1_voice').value);
+                
                     fetch('/process_question', {
                         method: 'POST',
                         body: formData,
@@ -352,30 +316,37 @@
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
                         }
-                        const reader = response.body.getReader();
-
-                        function read() {
-                            return reader.read().then(({ done, value }) => {
-                                if (done) {
-                                    console.log('Done receiving audio fragments');
-                                    return;
-                                }
-
-                                // Process the received audio fragment
-                                const audioBlob = new Blob([value], { type: 'audio/wav' });
-                                playAudioFragment(audioBlob);
-
-                                // Read the next chunk
-                                return read();
-                            });
-                        }
-
-                        return read();
+                        return response.blob();
+                    })
+                    .then(audioBlob => {
+                        // Create a blob URL and play the audio
+                        const audioURL = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioURL);
+                        audio.play();
+                        audio.onended = function() {
+                            URL.revokeObjectURL(audioURL);
+                
+                            // Resume the podcast if it was playing before
+                            if (isPodcastPlaying && podcastAudio.paused) {
+                                podcastAudio.play()
+                                    .then(() => {
+                                        console.log("Podcast resumed.");
+                                    })
+                                    .catch(error => {
+                                        console.error('Error resuming podcast:', error);
+                                    });
+                            }
+                        };
+                        audio.onerror = function(e) {
+                            console.error('Audio playback error:', e);
+                            URL.revokeObjectURL(audioURL);
+                        };
                     })
                     .catch(error => {
-                        console.error('Error receiving audio fragments:', error);
+                        console.error('Error receiving audio:', error);
                     });
                 }
+                
 
                 // Queue to manage audio playback
                 function playAudioFragment(audioBlob) {

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, session, jsonify, send_file, Response, stream_with_context
+from flask import Flask, render_template, request, url_for, make_response, session, jsonify, send_file, Response, stream_with_context
 import os
 from dotenv import load_dotenv
 import re
@@ -36,11 +36,11 @@ app.config['VOICE_SAMPLE_DIR'] = "static/voice_samples"
 
 # Define available voices (Option 1: Hardcoded)
 AVAILABLE_VOICES = [
-    {'name': 'en-US-OnyxMultilingualNeuralHD', 'display_name': 'Onyx Multilingual'},
     {'name': 'en-US-GuyNeural', 'display_name': 'Guy'},
     {'name': 'en-US-JennyNeural', 'display_name': 'Jenny'},
     {'name': 'en-US-AriaNeural', 'display_name': 'Aria'},
     {'name': 'en-CA-LiamNeural', 'display_name': 'Liam'},
+    {'name': 'en-US-OnyxMultilingualNeuralHD', 'display_name': 'Onyx Multilingual'}
     # Add more voices as needed
 ]
 
@@ -289,65 +289,74 @@ def autosave():
     except Exception as e:
         print(f"Error in autosave: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
+    
+    
 @app.route('/process_question', methods=['POST'])
 def process_question():
-    print("Processing question...")
-    # Ensure the request contains the audio data
-    if 'audio_data' not in request.files:
-        return Response("No audio_data part in the request.", status=400)
+    try:
+        # Ensure the request contains the audio data
+        if 'audio_data' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No audio_data part in the request.'}), 400
 
-    audio_file = request.files['audio_data']
+        audio_file = request.files['audio_data']
 
-    if audio_file.filename == '':
-        return Response("No selected file.", status=400)
+        if audio_file.filename == '':
+            return jsonify({'status': 'error', 'message': 'No selected file.'}), 400
 
-    # Save the uploaded audio file temporarily
-    process_id = uuid.uuid4().hex  # Unique ID for this process
-    temp_audio_path = f"temp_audio_{process_id}.wav"
-    audio_file.save(temp_audio_path)
+        # Save the uploaded audio file temporarily
+        process_id = uuid.uuid4().hex  # Unique ID for this process
+        temp_audio_path = f"temp_audio_{process_id}.wav"
+        audio_file.save(temp_audio_path)
 
-    # Transcribe the audio to text
-    transcription = transcribe_audio(temp_audio_path)
-    if not transcription:
+        # Transcribe the audio to text
+        transcription = transcribe_audio(temp_audio_path)
+        if not transcription:
+            cleanup_temp_file(temp_audio_path)
+            return jsonify({'status': 'error', 'message': 'Failed to transcribe audio.'}), 500
+
+        print(f"Transcription: {transcription}")
+
+        # Generate a response using OpenAI GPT-4
+        context = request.form.get('text_content', '').strip()
+
+        if not context:
+            context = "Default context if none available."
+
+        answer = generate_answer(transcription, context)
+        if not answer:
+            cleanup_temp_file(temp_audio_path)
+            return jsonify({'status': 'error', 'message': 'Failed to generate answer.'}), 500
+
+        print(f"Generated Answer: {answer}")
+
+        # Retrieve speaker voice (using speaker1_voice as default)
+        speaker_voice = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
+
+        # Synthesize the entire answer
+        audio_chunks = list(synthesize_text_stream(answer, process_id, speaker_voice))
+
+        if not audio_chunks:
+            cleanup_temp_file(temp_audio_path)
+            return jsonify({'status': 'error', 'message': 'Failed to generate audio.'}), 500
+
+        # Combine the audio chunks
+        combined_audio_data = b''.join(audio_chunks)
+
+        # Return the audio data as a response
+        response = make_response(combined_audio_data)
+        response.headers.set('Content-Type', 'audio/mpeg')  # Adjust MIME type if using MP3
+        response.headers.set('Content-Disposition', 'attachment', filename='answer.mp3')
+
+        # Cleanup temporary audio recording after processing
         cleanup_temp_file(temp_audio_path)
-        return Response("Failed to transcribe audio.", status=500)
 
-    print(f"Transcription: {transcription}")
+        return response
 
-    # Generate a response using OpenAI GPT-4
-    
-    context = request.form.get('text_content', '').strip()
-    
-    if not context:
-        context = "Default context if none available."
+    except Exception as e:
+        error_message = f"An error occurred: {str(e)}"
+        print(error_message)
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
-    answer = generate_answer(transcription, context)
-    if not answer:
-        cleanup_temp_file(temp_audio_path)
-        return Response("Failed to generate answer.", status=500)
-
-    print(f"Generated Answer: {answer}")
-    
-    # retrieve speaker voice 1
-    speaker_voice = request.form.get('speaker1_voice', AVAILABLE_VOICES[0]['name'])
-    import time
-    # 5 seconds wait
-    time.sleep(5)
-
-    # Define a generator to stream audio fragments
-    def generate_audio_stream():
-        try:
-            for audio_data in synthesize_text_stream(answer, process_id, speaker_voice):
-                if audio_data:
-                    yield audio_data
-        except Exception as e:
-            print(f"Error during audio streaming: {e}")
-
-    # Cleanup temporary audio recording after processing
-    cleanup_temp_file(temp_audio_path)
-
-    return Response(stream_with_context(generate_audio_stream()), mimetype='audio/wav')
 
 
 # Constants for file paths

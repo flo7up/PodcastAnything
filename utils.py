@@ -402,8 +402,13 @@ def split_text_into_sentences(text):
 
     return chunks
 
+import threading
 
-def synthesize_text_stream(text, process_id, voice_name, max_retries=3):
+# Semaphore to limit concurrent synthesis requests
+MAX_CONCURRENT_REQUESTS = 5  # Adjust based on your Azure subscription limits
+synthesizer_semaphore = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+def synthesize_text_stream(text, process_id, voice_name, max_retries=3, initial_backoff=5):
     """
     Splits the text into sentences and synthesizes each sentence.
     Yields each synthesized audio fragment as bytes for streaming.
@@ -413,68 +418,69 @@ def synthesize_text_stream(text, process_id, voice_name, max_retries=3):
         print("Speech configuration is not set up properly.")
         return
 
-    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
+    # Acquire semaphore before proceeding
+    with synthesizer_semaphore:
+        synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
 
-    # Split text into sentences
-    sentences = split_text_into_sentences(text)
+        # Split text into sentences
+        sentences = split_text_into_sentences(text)
 
-    for i, sentence in enumerate(sentences, start=1):
-        retries = 0
-        while retries <= max_retries:
-            ssml = f"""
-            <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
-                <voice name='{voice_name}'>
-                    <p>{sentence}</p>
-                </voice>
-            </speak>
-            """
-            print(f"Synthesizing sentence {i} (Attempt {retries + 1}): {sentence}")
+        for i, sentence in enumerate(sentences, start=1):
+            retries = 0
+            while retries <= max_retries:
+                ssml = f"""
+                <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
+                    <voice name='{voice_name}'>
+                        <p>{sentence}</p>
+                    </voice>
+                </speak>
+                """
+                print(f"Synthesizing sentence {i} (Attempt {retries + 1}): {sentence.strip()}")
 
-            try:
-                result = synthesizer.speak_ssml_async(ssml).get()
+                try:
+                    result = synthesizer.speak_ssml_async(ssml).get()
 
-                if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                    yield result.audio_data
-                    print(f"Synthesized sentence {i} successfully.")
-                    break  # Exit the retry loop for this sentence
+                    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+                        yield result.audio_data
+                        print(f"Synthesized sentence {i} successfully.")
+                        break  # Exit retry loop for this sentence
 
-                elif result.reason == speechsdk.ResultReason.Canceled:
-                    cancellation_details = result.cancellation_details
-                    print(f"Speech synthesis canceled: {cancellation_details.reason}")
-                    if cancellation_details.reason == speechsdk.CancellationReason.Error and cancellation_details.error_details:
-                        print(f"Error details: {cancellation_details.error_details}")
-                        if "Error code: 4429" in cancellation_details.error_details:
-                            # Throttling error, wait and retry
-                            retries += 1
-                            if retries <= max_retries:
-                                wait_time = 5 * retries  # Exponential backoff
-                                print(f"Throttling error encountered. Waiting {wait_time} seconds before retrying...")
-                                time.sleep(wait_time)
+                    elif result.reason == speechsdk.ResultReason.Canceled:
+                        cancellation_details = result.cancellation_details
+                        print(f"Speech synthesis canceled: {cancellation_details.reason}")
+                        if cancellation_details.reason == speechsdk.CancellationReason.Error and cancellation_details.error_details:
+                            error_details = cancellation_details.error_details
+                            print(f"Error details: {error_details}")
+                            if "Error code: 4429" in error_details:
+                                # Throttling error, implement retry
+                                retries += 1
+                                if retries > max_retries:
+                                    print(f"Exceeded maximum retries for sentence {i}. Skipping.")
+                                    break
+                                backoff_time = initial_backoff * retries  # Exponential backoff
+                                print(f"Throttling detected. Retrying in {backoff_time} seconds...")
+                                time.sleep(backoff_time)
                                 continue
                             else:
-                                print(f"Exceeded maximum retries for sentence {i}. Skipping.")
+                                # Other errors, do not retry
+                                print(f"Non-throttling error encountered. Skipping sentence {i}.")
                                 break
                         else:
-                            # Other errors, do not retry
-                            print(f"Non-throttling error encountered. Skipping sentence {i}.")
+                            # Other cancellation reasons
+                            print(f"Cancellation reason: {cancellation_details.reason}. Skipping sentence {i}.")
                             break
-                    else:
-                        # Other cancellation reasons
-                        print(f"Cancellation reason: {cancellation_details.reason}. Skipping sentence {i}.")
+
+                except Exception as e:
+                    print(f"Exception during speech synthesis for sentence {i}: {e}")
+                    retries += 1
+                    if retries > max_retries:
+                        print(f"Exceeded maximum retries for sentence {i} due to exception. Skipping.")
                         break
-
-            except Exception as e:
-                print(f"Speech synthesis error for sentence {i}: {e}")
-                retries += 1
-                if retries <= max_retries:
-                    wait_time = 5 * retries  # Exponential backoff
-                    print(f"Exception encountered. Waiting {wait_time} seconds before retrying...")
-                    time.sleep(wait_time)
+                    backoff_time = initial_backoff * retries
+                    print(f"Exception encountered. Retrying in {backoff_time} seconds...")
+                    time.sleep(backoff_time)
                     continue
-                else:
-                    print(f"Exceeded maximum retries for sentence {i} due to exception. Skipping.")
-                    break
-
+                
 def save_text_to_file(text, file_path):
     """Utility function to save text to a file."""
     try:
