@@ -1,8 +1,32 @@
-flask
-python-dotenv
-azure-core
-azure-identity
-azure-ai-formrecognizer
-openai
-azure-cognitiveservices-speech
-pydub
+# Core Framework
+Flask>=2.0.0
+
+# Environment Variables Management
+python-dotenv>=0.20.0
+
+# WSGI Utilities (Handled by Flask)
+Werkzeug>=2.0.0
+
+# HTTP Requests
+requests>=2.0.0
+
+# HTML Parsing
+beautifulsoup4>=4.0.0
+
+# PDF Processing
+PyPDF2>=3.0.0
+
+# Audio Processing
+pydub>=0.25.0  # Requires FFmpeg installed on the system
+
+# OpenAI API
+openai>=0.27.0
+
+# Azure Cognitive Services for Speech
+azure-cognitiveservices-speech>=1.18.0
+
+# Azure AI Document Intelligence
+azure-ai-documentintelligence>=3.2.0
+
+# Server-Side Session Management
+Flask-Session>=0.4.0
