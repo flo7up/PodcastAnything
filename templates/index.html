@@ -608,7 +608,7 @@
                     <!-- Audio Spinner -->
                     <div id="loading_audio"></div>
                 </div>
-            </form>
+            
     
             <!-- Audio Output Section -->
             {% if audio_file %}
@@ -627,5 +627,6 @@
                     <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download Podcast</a>
                 </div>
             {% endif %}
+            </form>
         </div>
 </html>
