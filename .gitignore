@@ -6,3 +6,5 @@
 /text_files
 /static
 /__pycache__
+*.pdf
+*.wav
