@@ -1,13 +1,13 @@
 /* General Styles */
 :root {
-    --color-primary: #3498db;
-    --color-primary-hover: #2980b9;
+    --color-primary: #17a2b8;
+    --color-primary-hover: #138496;
     --color-success: #28a745;
     --color-success-hover: #218838;
     --color-info: #17a2b8;
     --color-info-hover: #138496;
-    --color-warning: #ffc107;
-    --color-warning-hover: #e0a800;
+    --color-warning: #17a2b8;
+    --color-warning-hover: #138496;
     --color-danger: #dc3545;
     --color-light: #f0f2f5;
     --color-dark: #333333;
@@ -44,7 +44,7 @@ h1, h2 {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
 }
 
 .logo-container img {

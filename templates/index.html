@@ -171,7 +171,7 @@
                                     </button>
                                 </div>
                             <div 
-                            <a href="/static/${data.audio_file}" download>Download Podcast</a>
+                            <a href="{{ url_for('static', filename=${data.audio_file}) }}" download>Download</a>
                     `;
                     messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
 
