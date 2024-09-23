@@ -5,7 +5,13 @@
     <title>Podcast Anything</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Updated to Font Awesome 6 for newer icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTTX9il3gAc5Em0pI5FdXLFou1xVVj3S1V0n9ODuZV5Yq88tJ0O3sR3Xqnz0P/O9gggYZj6X2g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Link to External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
     <script>
         // Function to handle autosave
@@ -171,7 +177,7 @@
                                     </button>
                                 </div>
                             <div 
-                            <a href="{{ url_for('static', filename=${data.audio_file}) }}" download>Download</a>
+                            <a href="/static/${data.audio_file}" download>Download</a>
                     `;
                     messageDiv.innerHTML = `<p class="success">${data.message}</p>`;
 
@@ -470,75 +476,86 @@
     </head>
     <body>
         <div class="container">
-            <!-- Centered logo -->
+            <!-- Logo and Title -->
             <div class="logo-container">
-                <h1>Podcast Anything</h1>
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Podcast Anything Logo">
+                <h1>Podcast Anything</h1>
             </div>
     
             <!-- Message Div for displaying messages -->
             <div id="message"></div>
     
-            <h2>Podcast Content</h2>
-            <p>Generate a podcast outline from a PDF or website content or just paste the content into the text field below.</p>
-            <div class="options-container">
-                <!-- Option 1: Upload PDF -->
-                <div class="option">
-                    <!-- Combined Form to Upload and Convert PDF -->
-                    <form id="uploadConvertPdfForm" enctype="multipart/form-data">
-                        
-                        <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required>
-                        
-                        <label for="use_azure_doc_intelligence">
-                            <input type="checkbox" name="use_azure_doc_intelligence" id="use_azure_doc_intelligence" checked>
-                            Use Azure Document Intelligence
-                        </label>
-                        
-                        <div class="buttons">
-                            <input type="submit" name="upload_convert_pdf" id="upload_convert_pdf" value="Extract Text from PDF">
-                            <!-- Optional: Spinner for this button if needed -->
-                            <!-- <div id="loading_upload_convert_pdf"></div> -->
-                        </div>
-                    </form>
+            <!-- Podcast Content Section -->
+            <section>
+                <h2><i class="fas fa-microphone-alt"></i> Podcast Content</h2>
+                <p>Generate a podcast outline from a PDF, website content, or paste the content into the text field below.</p>
+                <div class="options-container">
+                    <!-- Option 1: Upload PDF -->
+                    <div class="option">
+                        <form id="uploadConvertPdfForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="pdf_file"><i class="fas fa-file-pdf"></i> Select PDF File</label>
+                                <input type="file" name="pdf_file" id="pdf_file" accept=".pdf" required>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" name="use_azure_doc_intelligence" id="use_azure_doc_intelligence" checked>
+                                <label for="use_azure_doc_intelligence">Use Azure Document Intelligence</label>
+                            </div>
+                            <div class="buttons">
+                                <button type="submit" id="upload_convert_pdf">
+                                    <i class="fas fa-file-upload"></i> Extract Text from PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+    
+                    <!-- Divider -->
+                    <div class="option-divider">
+                        <h2>Or</h2>
+                    </div>
+    
+                    <!-- Option 2: Extract Text from Website -->
+                    <div class="option">
+                        <form id="extractWebsiteForm">
+                            <div class="form-group">
+                                <label for="website_url"><i class="fas fa-globe"></i> Website URL</label>
+                                <input type="url" name="website_url" id="website_url" placeholder="Enter website URL..." required>
+                            </div>
+                            <div class="buttons">
+                                <button type="submit" id="extract_website_text">
+                                    <i class="fas fa-file-import"></i> Extract Text from Website
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div class="optiondivider">
-                    <h2>Or</h2>
-                </div>  
-                <!-- Option 2: Extract Text from Website -->
-                <div class="option">
-                    <!-- Form to Extract Text from Website -->
-                    <form id="extractWebsiteForm">
-                        
-                        <input type="url" name="website_url" id="website_url" placeholder="Enter website URL here..." required>
-                        
-                        <div class="buttons">
-                            <input type="submit" name="extract_website" id="extract_website_text" value="Extract Text from Website">
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <br>
-            <!-- Generate Podcast Outline Section -->
-            
-            <form id="outlineForm">
-                <label for="text_content">Content for Generating the Podcast Outline</label>
-                <textarea name="text_content" id="text_content" rows="10" required>{{ text_content }}</textarea>
-                
-                <div class="buttons">
-                    <input type="submit" id="generate_outline" value="Generate Outline">
-                    <!-- Loading spinner -->
-                    <div id="loading"></div>
-                </div>
-            </form>
-            
-            <!-- Step 4: Generate Audio Podcast -->
-            <h2>Podcast Outline</h2>
-            <p>Select the speak voices and generate an audio podcast from the conversation outline below.</p>
-            <form id="generateAudioForm">
-                <div class="form-group voice-selection">
-                    <div class="voice-selectors">
+            </section>
+    
+            <!-- Content for Generating Podcast Outline -->
+            <section>
+                <form id="outlineForm">
+                    <div class="form-group">
+                        <label for="text_content"><i class="fas fa-align-left"></i> Content for Podcast Outline</label>
+                        <textarea name="text_content" id="text_content" rows="10" required>{{ text_content }}</textarea>
+                    </div>
+                    <div class="buttons">
+                        <button type="submit" id="generate_outline">
+                            <i class="fas fa-list-alt"></i> Generate Outline
+                        </button>
+                        <!-- Loading spinner -->
+                        <div id="loading"></div>
+                    </div>
+                </form>
+            </section>
+    
+            <!-- Podcast Outline Section -->
+            <section>
+                <h2><i class="fas fa-podcast"></i> Podcast Outline</h2>
+                <p>Select speaker voices and generate an audio podcast from the conversation outline below.</p>
+                <form id="generateAudioForm">
+                    <div class="voice-selection">
                         <div class="voice-selector">
-                            <label for="speaker1_voice">Speaker 1 Voice</label>
+                            <label for="speaker1_voice"><i class="fas fa-user"></i> Speaker 1 Voice</label>
                             <div class="voice-selection-container">
                                 <select name="speaker1_voice" id="speaker1_voice" required>
                                     {% for voice in available_voices %}
@@ -547,15 +564,14 @@
                                         </option>
                                     {% endfor %}
                                 </select>
-                                <!-- Play Button for Speaker 1 Voice -->
-                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker1_voice">
-                                    <i class="fas fa-play"></i>
+                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker1_voice" title="Play Sample">
+                                    <i class="fas fa-play-circle"></i>
                                 </button>
                             </div>
                         </div>
-            
+    
                         <div class="voice-selector">
-                            <label for="speaker2_voice">Speaker 2 Voice</label>
+                            <label for="speaker2_voice"><i class="fas fa-user"></i> Speaker 2 Voice</label>
                             <div class="voice-selection-container">
                                 <select name="speaker2_voice" id="speaker2_voice" required>
                                     {% for voice in available_voices %}
@@ -564,43 +580,49 @@
                                         </option>
                                     {% endfor %}
                                 </select>
-                                <!-- Play Button for Speaker 2 Voice -->
-                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker2_voice">
-                                    <i class="fas fa-play"></i>
+                                <button type="button" class="play-voice-sample" data-voice-input-id="speaker2_voice" title="Play Sample">
+                                    <i class="fas fa-play-circle"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            
-                <label for="conversation_text">Conversation Outline</label>
-                <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here..." required>{{ conversation }}</textarea>
-            
-                <div class="buttons">
-                    <input type="submit" name="generate_audio" id="generate_audio" value="Generate Audio">
-                    <!-- Audio Spinner -->
-                    <div id="loading_audio"></div>
-                </div>
-
-            </form>
+    
+                    <div class="form-group">
+                        <label for="conversation_text"><i class="fas fa-comments"></i> Conversation Outline</label>
+                        <textarea name="conversation_text" id="conversation_text" rows="20" placeholder="The generated conversation outline will appear here..." required>{{ conversation }}</textarea>
+                    </div>
+    
+                    <div class="buttons">
+                        <button type="submit" id="generate_audio">
+                            <i class="fas fa-music"></i> Generate Audio
+                        </button>
+                        <!-- Audio Spinner -->
+                        <div id="loading_audio"></div>
+                    </div>
+                </form>
+            </section>
+    
             <!-- Audio Output Section -->
             {% if audio_file %}
-                <div class="audio-section" id="audioSection">
-                    <h2>Your Podcast is Ready!</h2>
-                    <p>Use the microphone button to ask additional questions</p>
-                    <div class="audio-horizontal-divider">  
-                        <audio controls id="podcastAudio">
-                            <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <div class="microphone-container">
-                            <button id="microphoneButton">
-                                <img src="{{ url_for('static', filename='images/microphone.png') }}" alt="Microphone Icon">
-                            </button>
-                        </div>
+            <section class="audio-section" id="audioSection">
+                <h2><i class="fas fa-headphones"></i> Your Podcast is Ready!</h2>
+                <p>Use the microphone button to ask additional questions.</p>
+                <div class="audio-horizontal-divider">
+                    <audio controls id="podcastAudio">
+                        <source src="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="microphone-container">
+                        <button id="microphoneButton" title="Ask a Question">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                     </div>
-                    <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>Download</a>
                 </div>
+                <a href="{{ url_for('static', filename=audio_file.split('/')[-1]) }}" download>
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </section>
             {% endif %}
         </div>
-</html>
+    </body>
+    </html>
