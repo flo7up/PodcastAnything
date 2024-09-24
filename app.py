@@ -53,7 +53,12 @@ def index():
     conversation = session.get('conversation', '') or load_text_from_file(CONVERSATION_FILE)
     text_content = session.get('extracted_text', '') or load_text_from_file(EXTRACTED_TEXT_FILE)
     audio_file = session.get('audio_file', '')
-
+    if audio_file and os.path.exists(os.path.join('static', audio_file)):
+        audio_exists = True
+    else:
+        audio_exists = False
+        audio_file = None  # Ensure audio_file is None if the file doesn't exist
+        
     return render_template('index.html',
                            error=error,
                            conversation=conversation,
@@ -61,7 +66,8 @@ def index():
                            audio_file=audio_file,
                            available_voices=AVAILABLE_VOICES,
                            selected_voice1=session.get('speaker1_voice', AVAILABLE_VOICES[0]['name']),
-                           selected_voice2=session.get('speaker2_voice', AVAILABLE_VOICES[1]['name']))
+                           selected_voice2=session.get('speaker2_voice', AVAILABLE_VOICES[1]['name']), 
+                           audio_exists=audio_exists)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}

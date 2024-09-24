@@ -61,7 +61,7 @@ def generate_conversation(text_content, process_id):
     Generate a podcast conversation between two speakers discussing the following content:
     {text_content}
 
-    The podcast should be brief and start with an introduction explaining the topic and its relevance.
+    The podcast should be brief and start with a quick introduction to the topic.
     Then, the two speakers should have a lively discussion covering the most important points.
     The two speakers should have different speaking styles.
 
@@ -235,6 +235,7 @@ def generate_answer(question, context):
     """
     prompt = f"""
     Answer the following question based on the provided context.
+    If the answer is not present in the context, please just state this.
 
     Context:
     {context}

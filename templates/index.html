@@ -7,8 +7,6 @@
 
     <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Updated to Font Awesome 6 for newer icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTTX9il3gAc5Em0pI5FdXLFou1xVVj3S1V0n9ODuZV5Yq88tJ0O3sR3Xqnz0P/O9gggYZj6X2g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- Link to External CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
@@ -148,7 +146,7 @@
             </section>
     
             <!-- Audio Output Section -->
-            {% if audio_file %}
+            {% if audio_exists %}
             <section class="audio-section" id="audioSection">
                 <h2><i class="fas fa-headphones"></i> Your Podcast is Ready!</h2>
                 <p>Use the microphone button to ask additional questions.</p>
